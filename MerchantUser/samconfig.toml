@@ -1,0 +1,67 @@
+version = 0.1
+
+[dev]
+[dev.deploy]
+[dev.deploy.parameters]
+stack_name = "spirits-dev-merchant-merchantuser"
+s3_bucket = "843219620739-spirits-dev-samdeploy"
+s3_prefix = "spirits-dev-merchant-merchantuser"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Application=\"spirits\" Module=\"merchantapi\" Environment=\"dev\" NodeLayerArn=\"/spirits/dev/shared/nodelayer/arn\" MerchantUserPoolId=\"/spirits/dev/platform/merchantuserpool/id\" MerchantClientId=\"/spirits/dev/merchant/merchantuserpoolclient/id\" EventBusName=\"/spirits/dev/DrCognitoUsersEventBus/name\""
+
+[devDep]
+[devDep.deploy]
+[devDep.deploy.parameters]
+stack_name = "spirits-dev-merchant-merchantuser-dep"
+s3_bucket = "843219620739-spirits-dev-samdeploy"
+s3_prefix = "spirits-dev-merchant-merchantuser-dep"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Application=\"spirits\" Module=\"merchantapi\" Environment=\"dev\" NodeLayerArn=\"/spirits/dev/shared/nodelayer/arn\" MerchantUserPoolId=\"/spirits/dev/platform/merchantuserpool/id\" MerchantClientId=\"/spirits/dev/merchant/merchantuserpoolclient/id\" EventBusName=\"/spirits/dev/DrCognitoUsersEventBus/name\""
+
+[sit]
+[sit.deploy]
+[sit.deploy.parameters]
+stack_name = "spirits-sit-merchant-merchantuser"
+s3_bucket = "843219620739-spirits-dev-samdeploy"
+s3_prefix = "spirits-sit-merchant-merchantuser"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Application=\"spirits\" Module=\"merchantapi\" Environment=\"sit\" NodeLayerArn=\"/spirits/sit/shared/nodelayer/arn\" MerchantUserPoolId=\"/spirits/sit/platform/merchantuserpool/id\" MerchantClientId=\"/spirits/sit/merchant/merchantuserpoolclient/id\" EventBusName=\"/spirits/sit/DrCognitoUsersEventBus/name\""
+
+[sitDep]
+[sitDep.deploy]
+[sitDep.deploy.parameters]
+stack_name = "spirits-sit-merchant-merchantuser-dep"
+s3_bucket = "843219620739-spirits-dev-samdeploy"
+s3_prefix = "spirits-sit-merchant-merchantuser-dep"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Application=\"spirits\" Module=\"merchantapi\" Environment=\"sit\" NodeLayerArn=\"/spirits/sit/shared/nodelayer/arn\" MerchantUserPoolId=\"/spirits/sit/platform/merchantuserpool/id\" MerchantClientId=\"/spirits/sit/merchant/merchantuserpoolclient/id\" EventBusName=\"/spirits/sit/DrCognitoUsersEventBus/name\""
+
+[prd]
+[prd.deploy]
+[prd.deploy.parameters]
+stack_name = "spirits-prd-merchant-merchantuser"
+s3_bucket = "409907184267-spirits-prd-samdeploy"
+s3_prefix = "spirits-prd-merchant-merchantuser"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Application=\"spirits\" Module=\"merchantapi\" Environment=\"prd\" NodeLayerArn=\"/spirits/prd/shared/nodelayer/arn\" MerchantUserPoolId=\"/spirits/prd/platform/merchantuserpool/id\" MerchantClientId=\"/spirits/prd/merchant/merchantuserpoolclient/id\" EventBusName=\"/spirits/prd/DrCognitoUsersEventBus/name\""
+
+[prdDep]
+[prdDep.deploy]
+[prdDep.deploy.parameters]
+stack_name = "spirits-prd-merchant-merchantuser-dep"
+s3_bucket = "409907184267-spirits-prd-samdeploy"
+s3_prefix = "spirits-prd-merchant-merchantuser-dep"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Application=\"spirits\" Module=\"merchantapi\" Environment=\"prd\" NodeLayerArn=\"/spirits/prd/shared/nodelayer/arn\" MerchantUserPoolId=\"/spirits/prd/platform/merchantuserpool/id\" MerchantClientId=\"/spirits/prd/merchant/merchantuserpoolclient/id\" EventBusName=\"/spirits/prd/DrCognitoUsersEventBus/name\""

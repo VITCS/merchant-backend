@@ -1,0 +1,10 @@
+{
+  "name": "merchantUserStore-lambda",
+  "version": "2.0.0",
+  "description": "Lambda Functions for Merchant User Store Management",
+  "main": "index.js",
+  "license": "Apache-2.0",
+  "dependencies": {
+
+  }
+}

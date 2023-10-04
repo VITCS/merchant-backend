@@ -1,0 +1,115 @@
+################################################
+# Template for Tables - MerchantUser
+################################################
+
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: "AWS::Serverless-2016-10-31"
+
+################################################
+# Parameters
+################################################
+Parameters:
+  Application:
+    Type: String
+  Module:
+    Type: String
+  Environment:
+    Type: String
+    Default: dev2
+    Description: Environment name
+  LogLevel:
+    Type: String
+    Default: INFO
+  RetentionInDays:
+    Type: Number
+    Default: 30
+    Description: CloudWatch Logs retention period for Lambda functions
+  NodeLayerArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: Node Layer NodeDependenciesLayer ARN
+  MerchantUserPoolId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: Merchant UserPoolId
+  MerchantClientId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: Merchant Client Id
+  EventBusName:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: EventBridge Event Bus Name
+
+Globals:
+  Function:
+    Runtime: nodejs16.x
+    Handler: index.handler
+    Layers:
+      - !Ref NodeLayerArn
+    Timeout: 30
+    Tracing: Active
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+        LOG_LEVEL: !Ref LogLevel
+
+################################################
+# Resources
+################################################
+Resources:
+  ################################################
+  # Functions
+  ################################################
+  ManageMerchantUser:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${Application}-${Environment}-ManageMerchantUser-Function
+      Handler: manage_merchantuser.handler
+      CodeUri: ./src
+      MemorySize: 768
+      Tags:
+        Application: !Ref Application
+        Environment: !Ref Environment
+        Module: !Ref Module
+      Environment:
+        Variables:
+          Application: !Ref Application
+          TABLE_NAME: !Sub ${Application}-${Environment}-MerchantUser
+          MERCHANT_USER_STORE_TABLE: !Sub ${Application}-${Environment}-MerchantUserStore
+          STORE_TABLE: !Sub ${Application}-${Environment}-Store
+          MERCHANT_USER_POOL_ID: !Sub ${MerchantUserPoolId}
+          CLIENT_ID: !Ref MerchantClientId
+          LOG_LEVEL: !Ref LogLevel
+          EVENT_BUS_NAME: !Ref EventBusName
+          EVENT_BUS_SOURCE: !Sub ${Application}-${Environment}-ManageMerchantUser-Function
+
+      Policies:
+        - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
+
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:*
+                - dynamodb:BatchGetItem
+                - dynamodb:BatchWriteItem
+                - dynamodb:PutItem
+                - dynamodb:DeleteItem
+                - dynamodb:GetItem
+                - dynamodb:Scan
+                - dynamodb:Query
+                - dynamodb:UpdateItem
+                - events:putEvents
+              Resource:
+                - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Application}-${Environment}-MerchantUser
+                - Fn::Sub: arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Application}-${Environment}-MerchantUser
+                - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Application}-${Environment}-MerchantUserStore
+                - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Application}-${Environment}-Store
+                - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Application}-${Environment}-MerchantUserStore/index/byUser
+                - !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${MerchantUserPoolId}"
+                - !Sub arn:aws:cognito-idp:us-west-2:${AWS::AccountId}:userpool/us-west-2_8MIcY2Uk2
+                - !Sub arn:aws:cognito-idp:us-west-2:${AWS::AccountId}:userpool/us-west-2_V2PzIZiNp
+                - !Sub "arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/${EventBusName}"
+
+  ManageMerchantUserLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ManageMerchantUser}"
+      RetentionInDays: !Ref RetentionInDays

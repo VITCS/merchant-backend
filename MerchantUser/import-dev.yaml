@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Resources:
+
+  NoneResource:
+    Type: AWS::CloudFormation::WaitConditionHandle
+    Metadata:
+      SamResourceId: NoneResource
+      
+
+  MerchantUserTable:
+    Type: AWS::DynamoDB::GlobalTable
+    DeletionPolicy: Retain
+    Properties:
+      TableName: spirits-dev-MerchantUser
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+        - AttributeName: merchantAccountId
+          AttributeType: S
+        - AttributeName: phoneNumber
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: byEmail
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: byUserId
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: byMerchantAccountId
+          KeySchema:
+            - AttributeName: merchantAccountId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: byPhoneNumber
+          KeySchema:
+            - AttributeName: phoneNumber
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      BillingMode: PAY_PER_REQUEST
+      SSESpecification:
+        SSEEnabled: true
+      Replicas:
+         - Region: "us-east-1"
+      
+
+      
