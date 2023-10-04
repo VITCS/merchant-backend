@@ -1,0 +1,99 @@
+################################################
+# Parameters
+################################################
+Parameters:
+  Application:
+    Type: String
+  Module:
+    Type: String
+  Environment:
+    Type: String
+    Default: dev2
+    Description: Environment name
+  LogLevel:
+    Type: String
+    Default: INFO
+  RetentionInDays:
+    Type: Number
+    Default: 1
+    Description: CloudWatch Logs retention period for Lambda functions
+  EventBusName:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: EventBridge Event Bus Name
+  NodeLayerArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: Node Layer NodeDependenciesLayer ARN
+  QueryLimit:
+    Type: Number
+    Default: 20
+    Description: Maximum number of items to return from a single query
+  ApiId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: API Id
+  SearchItem:
+    Type: String
+    Description: Search Item i.e. Table to search
+    Default: ${Appplication}-${Environment}-MerchantUserStore
+##############################################################
+# Data Sources for Merchant User Store
+##############################################################
+Resources:
+  ########################
+  # Get Merchant User  #
+  ########################
+
+  GetMerchantUserResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: MerchantUserTable
+      FieldName: user
+      TypeName: MerchantUserStore
+      RequestMappingTemplate: !Sub |
+        #if( $util.isNull($ctx.source.userId) )
+          #return
+        #else
+        {
+          "version": "2017-02-28",
+          "operation": "GetItem",
+          "key": {
+            "userId": $util.dynamodb.toDynamoDBJson($ctx.source.userId),
+          }
+        }
+        #end
+      ResponseMappingTemplate: |
+        #if( $ctx.error )
+        $util.error($ctx.error.message, $ctx.error.type)
+        #else
+        $util.toJson($ctx.result)
+        #end
+
+  ########################
+  # Get Store  #
+  ########################
+
+  GetStoreResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: StoreTable
+      FieldName: store
+      TypeName: MerchantUserStore
+      RequestMappingTemplate: !Sub |
+        #if( $util.isNull($ctx.source.storeId) )
+          #return
+        #else
+        {
+          "version": "2017-02-28",
+          "operation": "GetItem",
+          "key": {
+            "id": $util.dynamodb.toDynamoDBJson($ctx.source.storeId),
+          }
+        }
+        #end
+      ResponseMappingTemplate: |
+        #if( $ctx.error )
+        $util.error($ctx.error.message, $ctx.error.type)
+        #else
+        $util.toJson($ctx.result)
+        #end

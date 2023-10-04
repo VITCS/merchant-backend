@@ -1,0 +1,2060 @@
+# Address is type only. Address type will be embedded in each of the entities as required.
+type AccountDetails {
+	midNumber: String!
+	bankName: String!
+	routingNumber: String!
+	accountNumber: String!
+}
+
+input AccountDetailsInput {
+	midNumber: String!
+	bankName: String!
+	routingNumber: String!
+	accountNumber: String!
+}
+
+type Address {
+	addrLine1: String!
+	addrLine2: String
+	city: String!
+	state: String
+	country: String!
+	postCode: String
+	latitude: Float
+	longitude: Float
+}
+
+input AddressInput {
+	addrLine1: String!
+	addrLine2: String
+	city: String!
+	state: String
+	country: String!
+	postCode: String
+	latitude: Float
+	longitude: Float
+}
+
+type AggRes @aws_api_key
+@aws_cognito_user_pools {
+	key: String
+	doc_count: Int
+}
+
+type CarriersAllowed {
+	carriers: [String]
+}
+
+input ConfirmSignupInput {
+	username: String!
+}
+
+input CreateDeviceTokenInput {
+	deviceToken: ID
+	userId: ID
+	userType: UserType
+	userPool: UserPool
+}
+
+input CreateGroupInput {
+	id: ID
+	group: String!
+	merchantAccountId: ID!
+}
+
+# Describes the creation of merchant account. Only Admin i.e m_admi has the privilege to create merchant account.
+input CreateMerchantAccountInput {
+	id: ID
+	companyName: String!
+	contactName: String!
+	contactPhoneNumber: String!
+	contactEmail: AWSEmail!
+	feinNumber: Int!
+	billingAddress: AddressInput
+	accountStatus: MerchantAccountStatus!
+	accountStatusReason: String
+	approvedAt: AWSDateTime
+	approvedBy: String
+	accountDetails: AccountDetailsInput
+	ownerId: ID
+	isInGroup: Boolean
+	brand_groupName: String
+	groupName: String
+	brand_groupGeography: String
+	grouptype: String
+	geography: String
+}
+
+# Describes the user that can login to Merchant Portal. User Credentials are managed by Cognito.
+input CreateMerchantUserInput {
+	userId: ID!
+	address: AddressInput
+	firstName: String!
+	middleName: String
+	lastName: String!
+	email: AWSEmail!
+	phoneNumber: String!
+	merchantAccountId: ID
+	userRole: userRole
+	password: String
+	profileImage: String
+	storeIds: [String]
+	storeCount: Int
+}
+
+# Describes the relationship between users to store and store to users as a join table.
+input CreateMerchantUserStoreInput {
+	id: ID
+	userId: ID!
+	storeId: ID!
+	merchantUserStoreMerchantUserId: ID
+	merchantUserStoreStoreId: ID!
+}
+
+input CreateOrderInput {
+	id: ID
+	userId: ID
+	merchantId: ID
+	totalAmount: Float
+	totalProductAmount: Float
+	totalTaxAmount: Float
+	totalServiceCharge: Float
+	totalDiscount: Float
+	orderStatus: OrderStatus
+	createdAt: AWSDateTime
+	closedAt: AWSDateTime
+	channel: String
+	userAgent: String
+	transactionId: String
+	cartId: ID
+	orderShipment: [OrderShipmentInput]
+}
+
+input CreateOrderShipmentInput {
+	id: ID
+	assignedStoreId: ID
+	orderId: ID
+	deliveryType: String
+	assignedStoreName: String
+	deliveryAddress: DeliveryAddressInput
+	shipmentStatus: ShipmentStatus
+	orderLineItems: [OrderLineItemInput]
+	statusHistory: ShipmentStHistoryInput
+	updatedAt: AWSDateTime
+	updatedBy: String
+	subTotalProductAmount: Float
+	subTotalTaxAmount: Float
+	subTotalServiceCharge: Float
+	subTotalDiscount: Float
+	createdAt: AWSDateTime
+	userId: ID
+	actionType: String
+	paymentIntentId: String
+	paymentIntentRes: String
+}
+
+# Describes the creation of store. Only Admin i.e m_admin has the privilege to create store and add users to the store.
+input CreateStoreInput {
+	id: ID
+	storeRefId: String
+	#Store Name
+	storeName: String!
+	# Address
+	address: AddressInput
+	#Merchant account Id
+	merchantAccountId: ID!
+	storeStatus: StoreStatus!
+	statusReason: String
+	statusUpdatedAt: AWSDateTime
+	statusUpdatedBy: String
+	storePhotos: String
+	storePhoneNumber: String!
+	storeEmail: String
+	# Business Hours
+	businessHours: ServingHoursInput
+	# Delivery Hours
+	deliveryHours: ServingHoursInput
+	scheduleHours: deliveryHrsScheduleInput
+	storeClosing: Int
+	# Order type
+	orderFulfilling: OrderFulfillingInput
+	# Delivery and Shipping Information
+	deliveryScope: DeliveryScopeInput
+	# Gift Wrapping
+	giftWrapping: [GiftWrapping]
+	# shipping Arrangements
+	carriersAllowed: [String]
+	# Any special products for marketing
+	specialProdCat: [String]
+	# Store closing holidays
+	holidays: [HolidayInput]
+	# Assignes users to store
+	userIds: [String]
+	userCount: Int
+	# Operational flag
+	isPaused: Boolean
+	isDeliveryPaused: Boolean
+	isShippingPaused: Boolean
+	isPickupPaused: Boolean
+}
+
+input CreateStoreInputNew {
+	id: ID
+	storeRefId: String
+	storeName: String!
+	merchantAccountId: ID!
+	storeStatus: StoreStatus!
+	storePhoneNumber: String!
+	storePhotos: [S3ObjectInput]
+}
+
+input CreateStorePaymentsInput {
+	id: ID
+	merchantAccountId: ID!
+	storeId: ID
+	paymentGateway: PaymentGateway
+	paymentOptions: PaymentOptions
+	merPaymentAccDetails: String
+}
+
+input CreateUserWestInput {
+	username: String
+	firstName: String
+	middleName: String
+	lastName: String
+	email: String
+	phoneNumber: String
+	password: String
+}
+
+
+type CustomerProfile @aws_api_key
+@aws_cognito_user_pools {
+	id: ID
+	userId: ID!
+	firstName: String!
+	middleName: String
+	lastName: String!
+	email: AWSEmail!
+	phoneNumber: String
+	profileImage: String
+	occasionReminderProfile: Boolean
+	subscribeToNotification: Boolean
+	orderLineitemReplacement: Boolean
+	createdAt: AWSDateTime
+	updatedAt: AWSDateTime
+}
+
+input DeleteDeviceTokenInput {
+	deviceToken: ID!
+}
+
+input DeleteMerchantAccountInput {
+	id: ID!
+}
+
+input DeleteMerchantUserBulkInput {
+	userIds: [String]!
+}
+
+input DeleteMerchantUserInput {
+	userId: ID!
+}
+
+input DeleteMerchantUserStoreInput {
+	id: ID!
+}
+
+input DeleteOrderInput {
+	id: ID!
+}
+
+input DeletePhoto {
+	fileName: String!
+	MerchantAccountId: String!
+	StoreID: String
+	table: String
+}
+
+input DeleteStoreBulkInput {
+	ids: [String]!
+}
+
+input DeleteStoreInput {
+	id: ID!
+}
+
+input DeleteStorePaymentsInput {
+	id: ID!
+}
+
+enum Delivery {
+	Delivery_Local
+	Shipping_In_State
+	Shipping_Out_Of_State
+}
+
+type DeliveryAddress @aws_api_key
+@aws_cognito_user_pools {
+	addrLine1: String!
+	addrLine2: String
+	city: String!
+	state: String
+	country: String!
+	postCode: String
+	latitude: Float
+	longitude: Float
+}
+
+input DeliveryAddressInput {
+	addrLine1: String!
+	addrLine2: String
+	city: String!
+	state: String
+	country: String!
+	postCode: String
+	latitude: Float
+	longitude: Float
+}
+
+
+type DeliveryScope {
+	serviceArea: Int
+	MinOrderSize: Int
+	deliveryType: [DeliveryType]
+}
+
+input DeliveryScopeInput {
+	serviceArea: Int
+	MinOrderSize: Int
+	deliveryType: [DeliveryType]
+}
+
+enum DeliveryType {
+	Own_Driver
+	Delivery_Partner
+	Both
+}
+
+type DeviceToken @aws_api_key
+@aws_cognito_user_pools {
+	deviceToken: ID
+	userId: ID
+	userType: UserType
+	userPool: UserPool
+	user: MerchantUser
+	createdAt: AWSDateTime!
+	updatedAt: AWSDateTime!
+}
+
+type Discount {
+	DiscountType: String
+	amount: Float
+}
+
+input DiscountInput {
+	DiscountType: String
+	amount: Float
+}
+
+enum GiftWrapping {
+	Free
+	Paid_Service
+	Not_available
+}
+
+enum Gifting {
+	Personal
+	Business
+}
+
+type Group {
+	id: ID!
+	group: String!
+	merchantAccountId: ID!
+	MerchantAccount(filter: ModelMerchantAccountFilterInput, limit: Int, nextToken: String): ModelMerchantAccountConnection
+}
+
+type Holiday {
+	startDate: AWSDate
+	endDate: AWSDate
+	Description: String
+}
+
+input HolidayInput {
+	startDate: AWSDate
+	endDate: AWSDate
+	Description: String
+}
+
+# Describes the creation of merchant account. Only Admin i.e m_admi has the privilege to create merchant account.
+type MerchantAccount @aws_api_key
+@aws_cognito_user_pools {
+	id: ID!
+	companyName: String!
+	contactName: String!
+	contactPhoneNumber: String!
+	contactEmail: AWSEmail!
+	feinNumber: Int!
+	billingAddress: Address
+	accountStatus: MerchantAccountStatus!
+	accountStatusReason: String
+	approvedAt: AWSDateTime
+	approvedBy: String
+	accountDetails: AccountDetails
+	Stores(
+		filter: ModelStoreFilterInput,
+		sortDirection: ModelSortDirection,
+		limit: Int,
+		nextToken: String
+	): ModelStoreConnection
+	ownerId: ID
+	Owner(
+		filter: ModelMerchantUserFilterInput,
+		sortDirection: ModelSortDirection,
+		limit: Int,
+		nextToken: String
+	): ModelMerchantUserConnection
+	isabrand_group: Boolean
+	brand_groupGeography: String
+	brand_groupName: String
+	isinbrand_group: Boolean
+	in_brand_groupName: String
+	in_geography: String
+	Groups(filter: ModelGroupFilterInput, limit: Int, nextToken: String): ModelGroupConnection
+	createdAt: AWSDateTime!
+	updatedAt: AWSDateTime
+}
+
+enum MerchantAccountStatus {
+	NEW
+	SUBMITTED
+	APPROVED
+	ACTIVE
+	DISABLED
+	ONHOLD
+}
+
+type MerchantUser @aws_api_key
+@aws_cognito_user_pools {
+	userId: ID!
+	displayUserName: String
+	firstName: String!
+	address: Address
+	middleName: String
+	lastName: String!
+	email: AWSEmail!
+	phoneNumber: String!
+	merchantAccountId: ID
+	merchantAccount: MerchantAccount
+	userRole: userRole
+	password: String
+	stores(
+		filter: ModelMerchantUserStoreFilterInput,
+		sortDirection: ModelSortDirection,
+		limit: Int,
+		nextToken: String
+	): ModelMerchantUserStoreConnection
+	storeCount: Int
+	createdAt: AWSDateTime!
+	updatedAt: AWSDateTime
+	profileImage: String
+	returnedIds: [String]
+}
+
+# Describes the relationship between users to store and store to users as a join table.
+type MerchantUserStore @aws_api_key
+@aws_cognito_user_pools {
+	id: ID!
+	userId: ID!
+	user: MerchantUser
+	storeId: ID!
+	merchantAccount: MerchantAccount
+	store: Store
+	createdAt: AWSDateTime!
+	updatedAt: AWSDateTime!
+}
+
+type MerchantUserWest @aws_api_key
+@aws_cognito_user_pools {
+	Username: String!
+	firstName: String!
+	lastName: String!
+	email: String!
+	phoneNumber: String!
+	password: String!
+}
+
+input ModelBooleanFilterInput {
+	ne: Boolean
+	eq: Boolean
+}
+
+type ModelDeviceTokenConnection {
+	items: [DeviceToken]
+	nextToken: String
+}
+
+input ModelDeviceTokenFilterInput {
+	deviceToken: ModelIDFilterInput
+	userId: ModelIDFilterInput
+	userType: ModelUserTypeFilterInput
+	userPool: ModelUserPoolFilterInput
+	and: [ModelDeviceTokenFilterInput]
+	or: [ModelDeviceTokenFilterInput]
+	not: ModelDeviceTokenFilterInput
+}
+
+input ModelFloatFilterInput {
+	ne: Float
+	eq: Float
+	le: Float
+	lt: Float
+	ge: Float
+	gt: Float
+	between: [Float]
+}
+
+input ModelGiftWrappingFilterInput {
+	eq: GiftWrapping
+	ne: GiftWrapping
+}
+
+type ModelGroupConnection {
+	items: [Group]
+	nextToken: String
+}
+
+input ModelGroupFilterInput {
+	merchantAccountId: ModelIDFilterInput
+	group: ModelStringFilterInput
+}
+
+input ModelIDFilterInput {
+	ne: ID
+	eq: ID
+	le: ID
+	lt: ID
+	ge: ID
+	gt: ID
+	contains: ID
+	notContains: ID
+	between: [ID]
+	beginsWith: ID
+}
+
+input ModelIntFilterInput {
+	ne: Int
+	eq: Int
+	le: Int
+	lt: Int
+	ge: Int
+	gt: Int
+	between: [Int]
+}
+
+type ModelMerchantAccountConnection {
+	items: [MerchantAccount]
+	nextToken: String
+}
+
+input ModelMerchantAccountFilterInput {
+	id: ModelIDFilterInput
+	companyName: ModelStringFilterInput
+	contactName: ModelStringFilterInput
+	contactPhoneNumber: ModelStringFilterInput
+	contactEmail: ModelStringFilterInput
+	feinNumber: ModelIntFilterInput
+	accountStatus: ModelMerchantAccountStatusFilterInput
+	accountStatusReason: ModelStringFilterInput
+	approvedAt: ModelStringFilterInput
+	approvedBy: ModelStringFilterInput
+	ownerId: ModelIDFilterInput
+	and: [ModelMerchantAccountFilterInput]
+	or: [ModelMerchantAccountFilterInput]
+	not: ModelMerchantAccountFilterInput
+}
+
+input ModelMerchantAccountStatusFilterInput {
+	eq: MerchantAccountStatus
+	ne: MerchantAccountStatus
+}
+
+type ModelMerchantUserConnection {
+	items: [MerchantUser]
+	nextToken: String
+}
+
+input ModelMerchantUserFilterInput {
+	userId: ModelIDFilterInput
+	displayUserName: ModelStringFilterInput
+	firstName: ModelStringFilterInput
+	middleName: ModelStringFilterInput
+	lastName: ModelStringFilterInput
+	email: ModelStringFilterInput
+	phoneNumber: ModelStringFilterInput
+	merchantAccountId: ModelIDFilterInput
+	userRole: ModeluserRoleFilterInput
+	storeCount: ModelIntFilterInput
+	and: [ModelMerchantUserFilterInput]
+	or: [ModelMerchantUserFilterInput]
+	not: ModelMerchantUserFilterInput
+}
+
+type ModelMerchantUserStoreConnection {
+	items: [MerchantUserStore]
+	nextToken: String
+}
+
+input ModelMerchantUserStoreFilterInput {
+	id: ModelIDFilterInput
+	userId: ModelIDFilterInput
+	storeId: ModelIDFilterInput
+	and: [ModelMerchantUserStoreFilterInput]
+	or: [ModelMerchantUserStoreFilterInput]
+	not: ModelMerchantUserStoreFilterInput
+}
+
+type ModelOrderConnection {
+	items: [Order]
+	nextToken: String
+}
+
+input ModelOrderFilterInput {
+	id: ModelIDFilterInput
+	userId: ModelIDFilterInput
+	totalAmount: ModelFloatFilterInput
+	totalProductAmount: ModelFloatFilterInput
+	totalTaxAmount: ModelFloatFilterInput
+	totalServiceCharge: ModelFloatFilterInput
+	totalDiscount: ModelFloatFilterInput
+	orderStatus: ModelOrderStatusFilterInput
+	createdAt: ModelStringFilterInput
+	closedAt: ModelStringFilterInput
+	channel: ModelStringFilterInput
+	userAgent: ModelStringFilterInput
+	transactionId: ModelStringFilterInput
+	cartId: ModelIDFilterInput
+	and: [ModelOrderFilterInput]
+	or: [ModelOrderFilterInput]
+	not: ModelOrderFilterInput
+}
+
+type ModelOrderShipmentConnection @aws_api_key
+@aws_cognito_user_pools {
+	items: [OrderShipment]
+	nextToken: String
+}
+
+input ModelOrderShipmentFilterInput {
+	id: ModelIDFilterInput
+	assignedStoreId: ModelIDFilterInput
+	deliveryType: ModelStringFilterInput
+	assignedStoreName: ModelStringFilterInput
+	shipmentStatus: ModelShipmentStatusFilterInput
+	updatedAt: ModelStringFilterInput
+	updatedBy: ModelStringFilterInput
+	subTotalProductAmount: ModelFloatFilterInput
+	subTotalTaxAmount: ModelFloatFilterInput
+	subTotalServiceCharge: ModelFloatFilterInput
+	subTotalDiscount: ModelFloatFilterInput
+	createdAt: ModelStringFilterInput
+	userId: ModelIDFilterInput
+	and: [ModelOrderShipmentFilterInput]
+	or: [ModelOrderShipmentFilterInput]
+	not: ModelOrderShipmentFilterInput
+}
+
+input ModelOrderStatusFilterInput {
+	eq: OrderStatus
+	ne: OrderStatus
+}
+
+input ModelPaymentGatewayFilterInput {
+	eq: PaymentGateway
+	ne: PaymentGateway
+}
+
+input ModelPaymentOptionsFilterInput {
+	eq: PaymentOptions
+	ne: PaymentOptions
+}
+
+type ModelSearchAddressConnection @aws_api_key
+@aws_cognito_user_pools {
+	items: [SearchAddress]
+		@aws_api_key
+@aws_cognito_user_pools
+	nextToken: String
+}
+
+input ModelShipmentStatusFilterInput {
+	eq: ShipmentStatus
+	ne: ShipmentStatus
+}
+
+enum ModelSortDirection {
+	ASC
+	DESC
+}
+
+type ModelStoreConnection {
+	items: [Store]
+	nextToken: String
+}
+
+input ModelStoreFilterInput {
+	id: ModelIDFilterInput
+	storeRefId: ModelStringFilterInput
+	storeName: ModelStringFilterInput
+	merchantAccountId: ModelIDFilterInput
+	displayName: ModelStringFilterInput
+	storeStatus: ModelStoreStatusFilterInput
+	statusReason: ModelStringFilterInput
+	statusUpdatedAt: ModelStringFilterInput
+	statusUpdatedBy: ModelStringFilterInput
+	storePhotos: ModelStringFilterInput
+	storePhoneNumber: ModelStringFilterInput
+	storeEmail: ModelStringFilterInput
+	storeClosing: ModelIntFilterInput
+	giftWrapping: ModelGiftWrappingFilterInput
+	carriersAllowed: ModelStringFilterInput
+	specialProdCat: ModelStringFilterInput
+	holidays: ModelStringFilterInput
+	userCount: ModelIntFilterInput
+	isPaused: ModelBooleanFilterInput
+	isDeliveryPaused: ModelBooleanFilterInput
+	isShippingPaused: ModelBooleanFilterInput
+	isPickupPaused: ModelBooleanFilterInput
+	isOnboarded: ModelBooleanFilterInput
+	and: [ModelStoreFilterInput]
+	or: [ModelStoreFilterInput]
+	not: ModelStoreFilterInput
+}
+
+type ModelStorePaymentsConnection {
+	items: [StorePayments]
+	nextToken: String
+}
+
+input ModelStorePaymentsFilterInput {
+	id: ModelIDFilterInput
+	merchantAccountId: ModelIDFilterInput
+	storeId: ModelIDFilterInput
+	paymentGateway: ModelPaymentGatewayFilterInput
+	paymentOptions: ModelPaymentOptionsFilterInput
+	merPaymentAccDetails: ModelStringFilterInput
+	and: [ModelStorePaymentsFilterInput]
+	or: [ModelStorePaymentsFilterInput]
+	not: ModelStorePaymentsFilterInput
+}
+
+input ModelStoreStatusFilterInput {
+	eq: StoreStatus
+	ne: StoreStatus
+}
+
+input ModelStringFilterInput {
+	ne: String
+	eq: String
+	le: String
+	lt: String
+	ge: String
+	gt: String
+	contains: String
+	notContains: String
+	between: [String]
+	beginsWith: String
+}
+
+input ModelUserPoolFilterInput {
+	eq: UserPool
+	ne: UserPool
+}
+
+input ModelUserTypeFilterInput {
+	eq: UserType
+	ne: UserType
+}
+
+input ModeluserRoleFilterInput {
+	eq: userRole
+	ne: userRole
+}
+
+type Mutation {
+	createDeviceToken(input: CreateDeviceTokenInput!): DeviceToken
+		@aws_api_key
+@aws_cognito_user_pools
+	updateDeviceToken(input: UpdateDeviceTokenInput!): DeviceToken
+		@aws_api_key
+@aws_cognito_user_pools
+	deleteDeviceToken(input: DeleteDeviceTokenInput!): DeviceToken
+		@aws_api_key
+@aws_cognito_user_pools
+	createMerchantUser(input: CreateMerchantUserInput!): MerchantUser
+	updateMerchantUser(input: UpdateMerchantUserInput!): MerchantUser
+	deleteMerchantUser(input: DeleteMerchantUserInput!): MerchantUser
+		@aws_api_key
+@aws_cognito_user_pools
+	createUserWest(input: CreateUserWestInput!): String
+		@aws_api_key
+@aws_cognito_user_pools
+	deleteMerchantUserBulk(input: DeleteMerchantUserBulkInput!): MerchantUser
+	createMerchantAccount(input: CreateMerchantAccountInput!): MerchantAccount
+	updateMerchantAccount(input: UpdateMerchantAccountInput!): MerchantAccount
+	deleteMerchantAccount(input: DeleteMerchantAccountInput!): MerchantAccount
+	createStore(input: CreateStoreInput!): Store
+	createStoreWithPhotos(input: CreateStoreInputNew!): Store
+	updateStore(input: UpdateStoreInput!): Store
+	deleteStore(input: DeleteStoreInput!): Store
+	deleteStoreBulk(input: DeleteStoreBulkInput!): Store
+	createStorePayments(input: CreateStorePaymentsInput!): StorePayments
+	updateStorePayments(input: UpdateStorePaymentsInput!): StorePayments
+	deleteStorePayments(input: DeleteStorePaymentsInput!): StorePayments
+	createMerchantUserStore(input: CreateMerchantUserStoreInput!): MerchantUserStore
+	updateMerchantUserStore(input: UpdateMerchantUserStoreInput!): MerchantUserStore
+	deleteMerchantUserStore(input: DeleteMerchantUserStoreInput!): MerchantUserStore
+	deletePhoto(input: DeletePhoto): String
+	createOrder(input: CreateOrderInput!): Order
+		@aws_api_key
+@aws_cognito_user_pools
+	addOrderShipment(input: CreateOrderShipmentInput!): OrderShipment
+		@aws_api_key
+@aws_cognito_user_pools
+	updateOrder(input: UpdateOrderInput!): Order
+		@aws_api_key
+@aws_cognito_user_pools
+	deleteOrder(id: ID!): Order
+		@aws_api_key
+@aws_cognito_user_pools
+	createOrderShipment(input: CreateOrderShipmentInput!): OrderShipment
+		@aws_api_key
+@aws_cognito_user_pools
+	updateOrderShipment(input: UpdateOrderShipmentInput!): OrderShipment
+		@aws_api_key
+@aws_cognito_user_pools
+	deleteOrderShipment(id: ID!): OrderShipment
+		@aws_api_key
+@aws_cognito_user_pools
+	createUserWestMerchant(
+		username: String!,
+		password: String!,
+		firstName: String!,
+		lastName: String!,
+		email: String!,
+		phoneNumber: String!
+	): String
+		@aws_api_key
+@aws_cognito_user_pools
+	updateUserWest(input: UpdateUserWestInput!): String
+		@aws_api_key
+@aws_cognito_user_pools
+	updateEmailVerification(input: UpdateEmailVerificationInput!): String
+	    @aws_api_key
+@aws_cognito_user_pools
+	updatePhoneVerification(input: UpdatePhoneVerificationInput!): String
+		@aws_api_key
+@aws_cognito_user_pools
+	updateForgetPassword(input: UpdateForgetPasswordInput!): String
+		@aws_api_key
+@aws_cognito_user_pools
+	confirmSignup(input: ConfirmSignupInput!): String
+		@aws_api_key
+@aws_cognito_user_pools
+	createGroup(input: CreateGroupInput!): Group
+		@aws_api_key
+@aws_cognito_user_pools
+	updateGroup(input: UpdateGroupInput!): Group
+		@aws_api_key
+@aws_cognito_user_pools
+	deleteGroup(id: ID!): Group
+}
+
+type Order @aws_api_key
+@aws_cognito_user_pools {
+	id: ID
+	userId: ID
+	merchantId: ID
+	totalAmount: Float
+	totalProductAmount: Float
+	totalTaxAmount: Float
+	totalServiceCharge: Float
+	totalDiscount: Float
+	orderStatus: OrderStatus
+	createdAt: AWSDateTime!
+	closedAt: AWSDateTime!
+	channel: String
+	userAgent: String
+	orderShipment: ModelOrderShipmentConnection
+	transactionId: String
+	cartId: ID
+	updatedAt: AWSDateTime!
+}
+
+type OrderFulfilling {
+	pickUp: [PickUp]
+	delivery: [Delivery]
+	shipping: String
+	gifting: Gifting
+}
+
+input OrderFulfillingInput {
+	pickUp: [PickUp]
+	delivery: [Delivery]
+	shipping: String
+	gifting: Gifting
+}
+
+type OrderLineItem @aws_api_key
+@aws_cognito_user_pools {
+	id: ID
+	productId: ID
+	productName: String
+	prodShortDesc: String
+	size: Int
+	uom: Int
+	itemInvalid: Boolean
+	qtyPurchased: Int
+	unitPrice: String
+	totalPrice: String
+	taxes: [Tax]
+	charges: [serviceCharge]
+	discounts: [Discount]
+}
+
+input OrderLineItemInput {
+	id: ID
+	productId: ID
+	productName: String
+	prodShortDesc: String
+	size: Int
+	uom: Int
+	itemInvalid: Boolean
+	qtyPurchased: Int
+	unitPrice: String
+	totalPrice: String
+	taxes: [TaxInput]
+	charges: [ServiceChargeInput]
+	discounts: [DiscountInput]
+	updateBtnDisabled: Boolean
+}
+
+type OrderShipment @aws_api_key
+@aws_cognito_user_pools {
+	id: ID
+	assignedStoreId: ID
+	orderId: ID
+	deliveryType: String
+	assignedStoreName: String
+	deliveryAddress: DeliveryAddress
+	shipmentStatus: ShipmentStatus
+	orderLineItems: [OrderLineItem]
+	statusHistory: ShipmentStHistory
+	updatedAt: AWSDateTime
+	updatedBy: String
+	subTotalProductAmount: Float
+	subTotalTaxAmount: Float
+	subTotalAmount: Float
+	subTotalDeliveryCharges: Float
+	subTotalTax: Float
+	subTotalTipAmount: Float
+	scheduledDeliveryDt: AWSDate
+	scheduledTimeSlot: String
+	subTotalServiceCharge: Float
+	subTotalDiscount: Float
+	totalDeliveryCharges: Float
+	totalTipAmount: Float
+	createdAt: AWSDateTime
+	userId: ID
+	actionType: String
+	paymentIntentId: String
+	paymentIntentRes: String
+	rejectionMsg: String
+	isUpdated: Boolean
+}
+
+input OrderShipmentInput {
+	id: ID
+	assignedStoreId: ID
+	orderId: ID
+	deliveryType: String
+	assignedStoreName: String
+	deliveryAddress: DeliveryAddressInput
+	shipmentStatus: ShipmentStatus
+	orderLineItems: [OrderLineItemInput]
+	statusHistory: ShipmentStHistoryInput
+	updatedAt: AWSDateTime
+	updatedBy: String
+	subTotalProductAmount: Float
+	subTotalTaxAmount: Float
+	subTotalServiceCharge: Float
+	subTotalTax: Float
+	subTotalTipAmount: Float
+	scheduledDeliveryDt: AWSDate
+	scheduledTimeSlot: String
+	subTotalAmount: Float
+	subTotalDeliveryCharges: Float
+	subTotalDiscount: Float
+	totalDeliveryCharges: Float
+	totalTipAmount: Float
+	createdAt: AWSDateTime
+	userId: ID
+	actionType: String
+	paymentIntentId: String
+	paymentIntentRes: String
+	isUpdated: Boolean
+	rejectionMsg: String
+}
+
+enum OrderStatus {
+	Created
+	Open
+	Closed
+}
+
+type Payment @aws_api_key
+@aws_cognito_user_pools {
+	id: ID
+	paymentType: String
+	instrument: String
+	amount: String
+	paymentDate: AWSDate
+	paymentReference: String
+	settlementDate: AWSDate
+	transactionId: String
+	createdAt: AWSDateTime!
+	updatedAt: AWSDateTime!
+}
+
+enum PaymentGateway {
+	Briantree
+}
+
+enum PaymentOptions {
+	Credit_Card
+	Briantree
+	Auth
+}
+
+enum PickUp {
+	Not_available
+	Pickup_instore
+	Pickup_curbside
+}
+
+type PriceAndAvailability @aws_cognito_user_pools
+@aws_api_key {
+	id: ID!
+	prodId: ID!
+	storeId: ID!
+	price: Float
+	splPrice: Float
+	splPriceEndDate: AWSDateTime
+	avlQuantity: Float
+	priceUpdatedTime: AWSDateTime
+	isAvailableForOnline: Boolean
+	createdAt: AWSDateTime
+	updatedAt: AWSDateTime
+}
+
+type Product @aws_api_key
+@aws_cognito_user_pools {
+	id: ID!
+	prodName: String!
+	prodFullName: String!
+	prodShortDesc: String!
+	prodLongDesc: String!
+	prodCategory: String!
+	prodMajor: String!
+	prodMinor: String!
+	prodCategoryRef: String!
+	upc: String
+	otherUPC: [String]
+	manufacturer: String
+	brandLine: String
+	size: String
+	uom: String
+	container: String
+	otherUOM: [ID]
+	imageFile: String
+	images: [String]
+	tags: [String]
+	country: String
+	region: String
+	winery: String
+	vintageKey: String
+	Vintage: String
+	abv: String
+	sweetness: String
+	flavour: String
+	createdAt: AWSDateTime
+	updatedAt: AWSDateTime
+}
+
+type ProductNew @aws_api_key
+@aws_cognito_user_pools {
+	id: ID!
+	prodName: String!
+	prodFullName: String!
+	prodShortDesc: String!
+	prodLongDesc: String!
+	prodCategory: String!
+	prodMajor: String!
+	prodMinor: String!
+	prodCategoryRef: String!
+	upc: String
+	otherUPC: [String]
+	manufacturer: String
+	brandLine: String
+	size: String
+	uom: String
+	container: String
+	otherUOM: [ID]
+	imageFile: String
+	images: [String]
+	tags: [String]
+	country: String
+	region: String
+	winery: String
+	vintageKey: String
+	Vintage: String
+	abv: String
+	sweetness: String
+	flavour: String
+	createdAt: AWSDateTime!
+	updatedAt: AWSDateTime!
+	price: Float
+}
+
+type Query {
+	getMerchantUser(userId: ID!): MerchantUser
+	listMerchantUsers(
+		userId: ID,
+		filter: ModelMerchantUserFilterInput,
+		limit: Int,
+		nextToken: String,
+		sortDirection: ModelSortDirection
+	): ModelMerchantUserConnection
+	getOrderShipment(id: ID!): OrderShipment
+		@aws_api_key
+@aws_cognito_user_pools
+	searchProductsLambda(
+		filter: SearchableProductFilterInput,
+		sort: SearchableProductSortInput,
+		limit: Int,
+		nextToken: String,
+		from: Int,
+		merchantAccountId: String,
+		distance: Int,
+		lat: Float,
+		lon: Float,
+		maxPrice: Float,
+		minPrice: Float
+	): SearchableProductConnectionNew
+		@aws_api_key
+@aws_cognito_user_pools
+	searchProducts(
+		filter: SearchableProductFilterInput,
+		sort: SearchableProductSortInput,
+		limit: Int,
+		nextToken: String,
+		from: Int
+	): SearchableProductConnection
+		@aws_api_key
+@aws_cognito_user_pools
+	searchProductsByIds(ids: [String]): SearchableProductConnection
+		@aws_api_key
+@aws_cognito_user_pools
+	listOrderShipments(filter: ModelOrderShipmentFilterInput, limit: Int, nextToken: String): ModelOrderShipmentConnection
+	getOrder(id: ID!): Order
+	searchPriceAndAvailabilitys(
+		filter: SearchablePriceAndAvailabilityFilterInput,
+		sort: SearchablePriceAndAvailabilitySortInput,
+		limit: Int,
+		nextToken: String,
+		from: Int,
+		lat: Float,
+		lon: Float,
+		distance: Int
+	): SearchablePriceAndAvailabilityConnection
+		@aws_api_key
+@aws_cognito_user_pools
+	listOrders(filter: ModelOrderFilterInput, limit: Int, nextToken: String): ModelOrderConnection
+	getMerchantAccount(id: ID!): MerchantAccount
+	getMerchantBrandGroupNames(brand_groupGeography: String!): brandGroupList
+	listMerchantAccounts(filter: ModelMerchantAccountFilterInput, limit: Int, nextToken: String): ModelMerchantAccountConnection
+	getStore(id: ID!): Store
+	listStores(filter: ModelStoreFilterInput, limit: Int, nextToken: String): ModelStoreConnection
+	getStorePayments(id: ID!): StorePayments
+	listStorePayments(filter: ModelStorePaymentsFilterInput, limit: Int, nextToken: String): ModelStorePaymentsConnection
+	getMerchantUserStore(id: ID!): MerchantUserStore
+	listMerchantUserStores(filter: ModelMerchantUserStoreFilterInput, limit: Int, nextToken: String): ModelMerchantUserStoreConnection
+	deviceTokenByUserId(
+		deviceToken: ID,
+		sortDirection: ModelSortDirection,
+		filter: ModelDeviceTokenFilterInput,
+		limit: Int,
+		nextToken: String
+	): ModelDeviceTokenConnection
+	userIdByDevicetoken(
+		userId: ID,
+		sortDirection: ModelSortDirection,
+		filter: ModelDeviceTokenFilterInput,
+		limit: Int,
+		nextToken: String
+	): ModelDeviceTokenConnection
+	merchantUserByEmail(
+		email: AWSEmail,
+		sortDirection: ModelSortDirection,
+		filter: ModelMerchantUserFilterInput,
+		limit: Int,
+		nextToken: String
+	): ModelMerchantUserConnection
+	merchantUserByPhoneNumber(
+		phoneNumber: String,
+		sortDirection: ModelSortDirection,
+		filter: ModelMerchantUserFilterInput,
+		limit: Int,
+		nextToken: String
+	): ModelMerchantUserConnection
+	merchantAccountByAccountStatus(
+		accountStatus: MerchantAccountStatus,
+		sortDirection: ModelSortDirection,
+		filter: ModelMerchantAccountFilterInput,
+		limit: Int,
+		nextToken: String
+	): ModelMerchantAccountConnection
+	storeByMerchantAccountId(
+		merchantAccountId: ID,
+		sortDirection: ModelSortDirection,
+		filter: ModelStoreFilterInput,
+		limit: Int,
+		nextToken: String
+	): ModelStoreConnection
+	StoreByStatus(
+		storeStatus: StoreStatus,
+		sortDirection: ModelSortDirection,
+		filter: ModelStoreFilterInput,
+		limit: Int,
+		nextToken: String
+	): ModelStoreConnection
+	storePaymentsByMerchantAccountId(
+		merchantAccountId: ID,
+		sortDirection: ModelSortDirection,
+		filter: ModelStorePaymentsFilterInput,
+		limit: Int,
+		nextToken: String
+	): ModelStorePaymentsConnection
+	merchantUserStoreByStoreId(
+		storeId: ID,
+		sortDirection: ModelSortDirection,
+		filter: ModelMerchantUserStoreFilterInput,
+		limit: Int,
+		nextToken: String
+	): ModelMerchantUserStoreConnection
+	merchantUserStoreByUserId(
+		userId: ID,
+		sortDirection: ModelSortDirection,
+		filter: ModelMerchantUserStoreFilterInput,
+		limit: Int,
+		nextToken: String
+	): ModelMerchantUserStoreConnection
+	searchStores(
+		filter: SearchableStoreFilterInput,
+		sort: SearchableStoreSortInput,
+		limit: Int,
+		nextToken: String,
+		from: Int
+	): SearchableStoreConnection
+	getS3SignedURL(
+		merchantAccountId: String!,
+		storeID: String,
+		fileName: String!,
+		requestType: String!,
+		contentType: String!
+	): s3signedURL
+	getMultipleSignedURL(
+		merchantAccountId: String!,
+		storeID: String,
+		requestType: String!,
+		filesList: [S3FileType]
+	): urlList
+	searchAddress(input: SearchAddressInput!): ModelSearchAddressConnection
+		@aws_api_key
+@aws_cognito_user_pools
+	listOrderShipmentByStoreId(
+		storeId: ID!,
+		filter: ModelOrderShipmentFilterInput,
+		limit: Int,
+		nextToken: String
+	): ModelOrderShipmentConnection
+	getDeviceToken(id: ID!): DeviceToken
+	listDeviceTokens(filter: ModelDeviceTokenFilterInput, limit: Int, nextToken: String): ModelDeviceTokenConnection
+	getUserDetailsByUserId(userId: String!): CustomerProfile
+	listGroups(filter: ModelGroupFilterInput, limit: Int, nextToken: String): ModelGroupConnection
+	getGroup(id: ID!): Group
+	getGroupByMerchantAccountId(merchantAccountId: ID!): Group
+}
+
+input S3FileType {
+	fileName: String!
+	contentType: String!
+}
+
+type S3Object {
+	bucket: String!
+	key: String!
+	region: String!
+}
+
+input S3ObjectInput {
+	bucket: String!
+	key: String!
+	region: String!
+	localUri: String
+	mimeType: String
+}
+
+type SearchAddress @aws_api_key
+@aws_cognito_user_pools {
+	street_line: String
+	secondary: String
+	city: String
+	state: String
+	zipcode: String
+	entries: Int
+}
+
+input SearchAddressInput {
+	includeCities: [String]
+	includeStates: [String]
+	searchStr: String!
+}
+
+input SearchableBooleanFilterInput {
+	eq: Boolean
+	ne: Boolean
+}
+
+input SearchableFloatFilterInput {
+	ne: Float
+	gt: Float
+	lt: Float
+	gte: Float
+	lte: Float
+	eq: Float
+	range: [Float]
+}
+
+input SearchableIDFilterInput {
+	ne: ID
+	gt: ID
+	lt: ID
+	gte: ID
+	lte: ID
+	eq: ID
+	match: ID
+	matchPhrase: ID
+	matchPhrasePrefix: ID
+	multiMatch: ID
+	exists: Boolean
+	wildcard: ID
+	regexp: ID
+	range: [ID]
+}
+
+input SearchableIntFilterInput {
+	ne: Int
+	gt: Int
+	lt: Int
+	gte: Int
+	lte: Int
+	eq: Int
+	range: [Int]
+}
+
+type SearchablePriceAndAvailabilityConnection @aws_api_key
+@aws_cognito_user_pools {
+	items: [PriceAndAvailability]
+		@aws_api_key
+@aws_cognito_user_pools
+	nextToken: String
+	total: Int
+}
+
+input SearchablePriceAndAvailabilityFilterInput {
+	id: SearchableIDFilterInput
+	prodId: SearchableIDFilterInput
+	storeId: SearchableIDFilterInput
+	price: SearchableFloatFilterInput
+	splPrice: SearchableFloatFilterInput
+	splPriceEndDate: SearchableStringFilterInput
+	avlQuantity: SearchableFloatFilterInput
+	priceUpdatedTime: SearchableStringFilterInput
+	isAvailableForOnline: Boolean
+	createdAt: SearchableStringFilterInput
+	updatedAt: SearchableStringFilterInput
+	and: [SearchablePriceAndAvailabilityFilterInput]
+	or: [SearchablePriceAndAvailabilityFilterInput]
+	not: SearchablePriceAndAvailabilityFilterInput
+}
+
+input SearchablePriceAndAvailabilitySortInput {
+	field: SearchablePriceAndAvailabilitySortableFields
+	direction: SearchableSortDirection
+}
+
+enum SearchablePriceAndAvailabilitySortableFields {
+	id
+	prodId
+	storeId
+	price
+	splPrice
+	splPriceEndDate
+	avlQuantity
+	priceUpdatedTime
+	isAvailableForOnline
+	createdAt
+	updatedAt
+}
+
+type SearchableProductConnection @aws_api_key
+@aws_cognito_user_pools {
+	items: [Product]
+		@aws_api_key
+@aws_cognito_user_pools
+	brand: [AggRes]
+		@aws_api_key
+@aws_cognito_user_pools
+	majorType: [AggRes]
+		@aws_api_key
+@aws_cognito_user_pools
+	country: [AggRes]
+		@aws_api_key
+@aws_cognito_user_pools
+	manufacturer: [AggRes]
+		@aws_api_key
+@aws_cognito_user_pools
+	container: [AggRes]
+		@aws_api_key
+@aws_cognito_user_pools
+	ProdCategory: [AggRes]
+		@aws_api_key
+@aws_cognito_user_pools
+	ProdMajor: [AggRes]
+		@aws_api_key
+@aws_cognito_user_pools
+	ProdMinor: [AggRes]
+		@aws_api_key
+@aws_cognito_user_pools
+	nextToken: String
+	total: Int
+}
+
+type SearchableProductConnectionNew @aws_api_key
+@aws_cognito_user_pools {
+	items: [ProductNew]
+		@aws_api_key
+@aws_cognito_user_pools
+	brand: [AggRes]
+		@aws_api_key
+@aws_cognito_user_pools
+	majorType: [AggRes]
+		@aws_api_key
+@aws_cognito_user_pools
+	country: [AggRes]
+		@aws_api_key
+@aws_cognito_user_pools
+	manufacturer: [AggRes]
+		@aws_api_key
+@aws_cognito_user_pools
+	container: [AggRes]
+		@aws_api_key
+@aws_cognito_user_pools
+	ProdCategory: [AggRes]
+		@aws_api_key
+@aws_cognito_user_pools
+	prodMajor: [AggRes]
+		@aws_api_key
+@aws_cognito_user_pools
+	prodMinor: [AggRes]
+		@aws_api_key
+@aws_cognito_user_pools
+	nextToken: String
+	total: Int
+}
+
+input SearchableProductFilterInput {
+	id: SearchableIDFilterInput
+	prodName: SearchableStringFilterInput
+	prodFullName: SearchableStringFilterInput
+	prodShortDesc: SearchableStringFilterInput
+	prodLongDesc: SearchableStringFilterInput
+	prodCategory: SearchableStringFilterInput
+	prodMajor: SearchableStringFilterInput
+	prodMinor: SearchableStringFilterInput
+	prodCategoryRef: SearchableStringFilterInput
+	upc: SearchableStringFilterInput
+	otherUPC: SearchableStringFilterInput
+	manufacturer: SearchableStringFilterInput
+	brandLine: SearchableStringFilterInput
+	size: SearchableStringFilterInput
+	uom: SearchableStringFilterInput
+	container: SearchableStringFilterInput
+	otherUOM: SearchableIDFilterInput
+	imageFile: SearchableStringFilterInput
+	images: SearchableStringFilterInput
+	tags: SearchableStringFilterInput
+	country: SearchableStringFilterInput
+	region: SearchableStringFilterInput
+	winery: SearchableStringFilterInput
+	vintageKey: SearchableStringFilterInput
+	Vintage: SearchableStringFilterInput
+	abv: SearchableStringFilterInput
+	sweetness: SearchableStringFilterInput
+	flavour: SearchableStringFilterInput
+	and: [SearchableProductFilterInput]
+	or: [SearchableProductFilterInput]
+	not: SearchableProductFilterInput
+}
+
+input SearchableProductSortInput {
+	field: SearchableProductSortableFields
+	direction: SearchableSortDirection
+}
+
+enum SearchableProductSortableFields {
+	id
+	prodName
+	prodFullName
+	prodShortDesc
+	prodLongDesc
+	prodCategory
+	prodMajor
+	prodMinor
+	prodCategoryRef
+	upc
+	otherUPC
+	manufacturer
+	brandLine
+	size
+	uom
+	container
+	otherUOM
+	imageFile
+	images
+	tags
+	country
+	region
+	winery
+	vintageKey
+	Vintage
+	abv
+	sweetness
+	flavour
+}
+
+enum SearchableSortDirection {
+	asc
+	desc
+}
+
+type SearchableStoreConnection {
+	items: [Store]
+	nextToken: String
+	total: Int
+}
+
+input SearchableStoreFilterInput {
+	id: SearchableIDFilterInput
+	storeRefId: SearchableStringFilterInput
+	storeName: SearchableStringFilterInput
+	merchantAccountId: SearchableIDFilterInput
+	statusReason: SearchableStringFilterInput
+	statusUpdatedAt: SearchableStringFilterInput
+	statusUpdatedBy: SearchableStringFilterInput
+	storePhotos: SearchableStringFilterInput
+	storePhoneNumber: SearchableStringFilterInput
+	storeEmail: SearchableStringFilterInput
+	storeClosing: SearchableIntFilterInput
+	carriersAllowed: SearchableStringFilterInput
+	specialProdCat: SearchableStringFilterInput
+	holidays: SearchableStringFilterInput
+	userCount: SearchableIntFilterInput
+	isPaused: SearchableBooleanFilterInput
+	isDeliveryPaused: SearchableBooleanFilterInput
+	isShippingPaused: SearchableBooleanFilterInput
+	isPickupPaused: SearchableBooleanFilterInput
+	and: [SearchableStoreFilterInput]
+	or: [SearchableStoreFilterInput]
+	not: SearchableStoreFilterInput
+}
+
+input SearchableStoreSortInput {
+	field: SearchableStoreSortableFields
+	direction: SearchableSortDirection
+}
+
+enum SearchableStoreSortableFields {
+	id
+	storeRefId
+	storeName
+	merchantAccountId
+	statusReason
+	statusUpdatedAt
+	statusUpdatedBy
+	storePhotos
+	storePhoneNumber
+	storeEmail
+	storeClosing
+	carriersAllowed
+	specialProdCat
+	holidays
+	userCount
+	isPaused
+	isDeliveryPaused
+	isShippingPaused
+	isPickupPaused
+}
+
+input SearchableStringFilterInput {
+	ne: String
+	gt: String
+	lt: String
+	gte: String
+	lte: String
+	eq: String
+	match: String
+	matchPhrase: String
+	matchPhrasePrefix: String
+	multiMatch: String
+	exists: Boolean
+	wildcard: String
+	regexp: String
+	range: [String]
+}
+
+input ServiceChargeInput {
+	chargeType: String
+	chargeAmount: String
+	taxes: [TaxInput]
+}
+
+input ServingHoursInput {
+	Mon: [String]
+	Tue: [String]
+	Wed: [String]
+	Thu: [String]
+	Fri: [String]
+	Sat: [String]
+	Sun: [String]
+}
+
+type ShipmentStHistory {
+	fromStatus: String
+	toStatus: String
+	updatedAt: AWSDateTime
+	updatedBy: String
+}
+
+input ShipmentStHistoryInput {
+	fromStatus: String
+	toStatus: String
+	updatedAt: AWSDateTime
+	updatedBy: String
+}
+
+enum ShipmentStatus {
+	Placed
+	Cancelled
+	ShelfToCounter
+	Accepted
+	Picked
+	Delivered
+	Rejected
+	Billed
+	Packing
+	Dispatched
+	Shipped
+}
+
+# Describes the creation of store. Only Admin i.e m_admin has the privilege to create store and add users to the store.
+type Store @aws_api_key
+@aws_cognito_user_pools {
+	id: ID!
+	storeRefId: String
+	storeName: String!
+	address: Address
+	displayName: String
+	merchantAccountId: ID!
+	merchantAccount: MerchantAccount
+	storeStatus: StoreStatus!
+	statusReason: String
+	statusUpdatedAt: AWSDateTime
+	statusUpdatedBy: String
+	storePhotos: String
+	storePhoneNumber: String!
+	storeEmail: String
+	businessHours: servingHours
+	deliveryHours: servingHours
+	scheduleHours: deliveryHrsSchedule
+	storeClosing: Int
+	orderFulfilling: OrderFulfilling
+	deliveryScope: DeliveryScope
+	giftWrapping: [GiftWrapping]
+	carriersAllowed: [String]
+	specialProdCat: [String]
+	holidays: [Holiday]
+	users(
+		filter: ModelMerchantUserStoreFilterInput,
+		sortDirection: ModelSortDirection,
+		limit: Int,
+		nextToken: String
+	): ModelMerchantUserStoreConnection
+	userCount: Int
+	createdAt: AWSDateTime!
+	updatedAt: AWSDateTime
+	returnedIds: [String]
+	isPaused: Boolean
+	isDeliveryPaused: Boolean
+	isShippingPaused: Boolean
+	isPickupPaused: Boolean
+	isOnboarded: Boolean
+}
+
+# Describes the creation of store payments. Only Admin i.e m_admin has the privilege to create store payments type.
+type StorePayments @aws_api_key
+@aws_cognito_user_pools {
+	id: ID!
+	merchantAccountId: ID!
+	merchantAccount: MerchantAccount
+	storeId: ID
+	paymentGateway: PaymentGateway
+	paymentOptions: PaymentOptions
+	merPaymentAccDetails: String
+	createdAt: AWSDateTime!
+	updatedAt: AWSDateTime
+}
+
+enum StoreStatus {
+	NEW
+	PENDING
+	ACTIVE
+	DISABLED
+	ONHOLD
+}
+
+type Subscription {
+	onCreateDeviceToken: DeviceToken
+		@aws_subscribe(mutations: ["createDeviceToken"])
+	onUpdateDeviceToken: DeviceToken
+		@aws_subscribe(mutations: ["updateDeviceToken"])
+	onDeleteDeviceToken: DeviceToken
+		@aws_subscribe(mutations: ["deleteDeviceToken"])
+	onCreateMerchantUser: MerchantUser
+		@aws_subscribe(mutations: ["createMerchantUser"])
+	onUpdateMerchantUser: MerchantUser
+		@aws_subscribe(mutations: ["updateMerchantUser"])
+	onDeleteMerchantUser: MerchantUser
+		@aws_subscribe(mutations: ["deleteMerchantUser"])
+	onCreateMerchantAccount: MerchantAccount
+		@aws_subscribe(mutations: ["createMerchantAccount"])
+	onUpdateMerchantAccount: MerchantAccount
+		@aws_subscribe(mutations: ["updateMerchantAccount"])
+	onDeleteMerchantAccount: MerchantAccount
+		@aws_subscribe(mutations: ["deleteMerchantAccount"])
+	onCreateStore: Store
+		@aws_subscribe(mutations: ["createStore"])
+	onUpdateStore: Store
+		@aws_subscribe(mutations: ["updateStore"])
+	onDeleteStore: Store
+		@aws_subscribe(mutations: ["deleteStore"])
+	onCreateStorePayments: StorePayments
+		@aws_subscribe(mutations: ["createStorePayments"])
+	onUpdateStorePayments: StorePayments
+		@aws_subscribe(mutations: ["updateStorePayments"])
+	onDeleteStorePayments: StorePayments
+		@aws_subscribe(mutations: ["deleteStorePayments"])
+	onCreateMerchantUserStore: MerchantUserStore
+		@aws_subscribe(mutations: ["createMerchantUserStore"])
+	onUpdateMerchantUserStore: MerchantUserStore
+		@aws_subscribe(mutations: ["updateMerchantUserStore"])
+	onDeleteMerchantUserStore: MerchantUserStore
+		@aws_subscribe(mutations: ["deleteMerchantUserStore"])
+@aws_api_key
+@aws_cognito_user_pools
+	onCreateOrder: Order
+		@aws_subscribe(mutations: ["createOrder"])
+@aws_cognito_user_pools
+	onUpdateOrder: Order
+		@aws_subscribe(mutations: ["updateOrder"])
+	onDeleteOrder: Order
+		@aws_subscribe(mutations: ["deleteOrder"])
+	# onAddOrder: Order
+	##########################################   @aws_subscribe(mutations: ["addOrder"])
+	##########################################   @aws_api_key
+	##########################################   @aws_cognito_user_pools
+	onAddOrderShipment(assignedStoreIds: [String]): OrderShipment
+		@aws_subscribe(mutations: ["addOrderShipment"])
+@aws_api_key
+@aws_cognito_user_pools
+	onCreateOrderShipment(assignedStoreId: [ID]): OrderShipment
+		@aws_subscribe(mutations: ["createOrderShipment"])
+@aws_api_key
+@aws_cognito_user_pools
+}
+
+type Tax @aws_api_key
+@aws_cognito_user_pools {
+	taxType: String
+	amount: Float
+}
+
+input TaxInput {
+	taxType: String
+	amount: Float
+}
+
+input UpdateDeviceTokenInput {
+	deviceToken: ID
+	userId: ID
+	userType: UserType
+	userPool: UserPool
+	updatedAt: AWSDateTime!
+}
+
+input UpdateEmailVerificationInput {
+	type: String!
+	value: String!
+	username: String!
+}
+
+input UpdatePhoneVerificationInput {
+	type: String!
+	value: String!
+	username: String!
+}
+
+input UpdateForgetPasswordInput {
+	username: String!
+	type: String!
+	password: String
+}
+
+input UpdateGroupInput {
+	id: ID
+	group: String
+	merchantAccountId: ID
+}
+
+input UpdateMerchantAccountInput {
+	id: ID!
+	companyName: String
+	contactName: String
+	contactPhoneNumber: String
+	contactEmail: AWSEmail
+	feinNumber: Int
+	billingAddress: AddressInput
+	accountStatus: MerchantAccountStatus
+	accountStatusReason: String
+	approvedAt: AWSDateTime
+	approvedBy: String
+	accountDetails: AccountDetailsInput
+	ownerId: ID
+	isabrand_group: Boolean
+	brand_groupGeography: String
+	brand_groupName: String
+	brandNameModified: Boolean
+    isinbrand_group: Boolean
+	in_brand_groupName: String
+	in_geography: String
+}
+
+input UpdateMerchantUserInput {
+	userId: ID!
+	address: AddressInput
+	firstName: String
+	middleName: String
+	lastName: String
+	email: AWSEmail
+	phoneNumber: String
+	merchantAccountId: ID
+	userRole: userRole
+	profileImage: String
+	storeIds: [String]
+	storeCount: Int
+}
+
+input UpdateMerchantUserStoreInput {
+	id: ID!
+	userId: ID
+	storeId: ID
+	merchantUserStoreMerchantUserId: ID
+	merchantUserStoreStoreId: ID
+}
+
+input UpdateOrderInput {
+	id: ID
+	userId: ID
+	merchantId: ID
+	totalAmount: Float
+	totalProductAmount: Float
+	totalTaxAmount: Float
+	totalServiceCharge: Float
+	totalDiscount: Float
+	orderStatus: OrderStatus
+	createdAt: AWSDateTime
+	closedAt: AWSDateTime
+	channel: String
+	userAgent: String
+	transactionId: String
+	cartId: ID
+	orderShipment: [OrderShipmentInput]
+}
+
+input UpdateOrderShipmentInput {
+	id: ID
+	assignedStoreId: ID
+	orderId: ID
+	deliveryType: String
+	assignedStoreName: String
+	deliveryAddress: DeliveryAddressInput
+	shipmentStatus: ShipmentStatus
+	orderLineItems: [OrderLineItemInput]
+	statusHistory: ShipmentStHistoryInput
+	updatedAt: AWSDateTime
+	updatedBy: String
+	subTotalProductAmount: Float
+	subTotalTaxAmount: Float
+	subTotalServiceCharge: Float
+	subTotalDiscount: Float
+	subTotalAmount: Float
+	subTotalDeliveryCharges: Float
+	subTotalTax: Float
+	subTotalTipAmount: Float
+	createdAt: AWSDateTime
+	userId: ID
+	actionType: String
+	paymentIntentId: String
+	paymentIntentRes: String
+	isUpdated: Boolean
+	rejectionMsg: String
+}
+
+input UpdateStoreInput {
+	id: ID!
+	storeRefId: String
+	storeName: String
+	address: AddressInput
+	merchantAccountId: ID
+	storeStatus: StoreStatus
+	statusReason: String
+	statusUpdatedAt: AWSDateTime
+	statusUpdatedBy: String
+	storePhotos: String
+	storePhoneNumber: String
+	storeEmail: String
+	businessHours: ServingHoursInput
+	deliveryHours: ServingHoursInput
+	scheduleHours: deliveryHrsScheduleInput
+	storeClosing: Int
+	orderFulfilling: OrderFulfillingInput
+	deliveryScope: DeliveryScopeInput
+	giftWrapping: [GiftWrapping]
+	carriersAllowed: [String]
+	specialProdCat: [String]
+	holidays: [HolidayInput]
+	userIds: [String]
+	userCount: Int
+	isPaused: Boolean
+	isDeliveryPaused: Boolean
+	isShippingPaused: Boolean
+	isPickupPaused: Boolean
+}
+
+input UpdateStorePaymentsInput {
+	id: ID!
+	merchantAccountId: ID
+	storeId: ID
+	paymentGateway: PaymentGateway
+	paymentOptions: PaymentOptions
+	merPaymentAccDetails: String
+}
+
+input UpdateUserWestInput {
+	username: String!
+	type: String!
+	password: String
+}
+
+enum UserPool {
+	Merchant
+	Customer
+	Operations
+	Delivery
+}
+
+enum UserType {
+	Anonymous
+	SignedIn
+}
+
+type brandGroupList {
+	brands: [String]
+}
+
+type deliveryHrsSchedule {
+	Mon: String
+	Tue: String
+	Wed: String
+	Thu: String
+	Fri: String
+	Sat: String
+	Sun: String
+}
+
+input deliveryHrsScheduleInput {
+	Mon: String
+	Tue: String
+	Wed: String
+	Thu: String
+	Fri: String
+	Sat: String
+	Sun: String
+}
+
+type s3signedURL {
+	signedURL: String
+	fileName: String
+}
+
+type serviceCharge {
+	chargeType: String
+	chargeAmount: String
+	taxes: [Tax]
+}
+
+type servingHours {
+	Mon: [String]
+	Tue: [String]
+	Wed: [String]
+	Thu: [String]
+	Fri: [String]
+	Sat: [String]
+	Sun: [String]
+}
+
+type urlList {
+	items: [s3signedURL]
+}
+
+enum userRole {
+	Merchant_Super_user
+	Merchant_Admin
+	Merchant_Manager
+	Store_Cashier
+	Store_Driver
+	Store_Manager
+	Store_Assistant
+}

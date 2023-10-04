@@ -1,0 +1,46 @@
+version = 0.1
+[dev]
+[dev.deploy]
+[dev.deploy.parameters]
+stack_name = "spirits-dev-merchant-api"
+s3_bucket = "843219620739-spirits-dev-samdeploy"
+s3_prefix = "spirits-dev-merchant-api"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
+parameter_overrides = "Application=\"spirits\" Module=\"merchant\" Environment=\"dev\" QueryLimit=\"20\" LogLevel=\"INFO\" RetentionInDays=\"30\" EventBusName=\"/spirits/dev/platform/eventbus/arn\" NodeLayerArn=\"/spirits/dev/shared/nodelayer/arn\" ElasticSearchDomainEndpoint=\"/spirits/dev/elasticsearch/domain/endpoint\" MerchantpoolId=\"/spirits/dev/platform/merchantuserpool/id\" OrderEventBus=\"/spirits/dev/orderEventBus/name\" "
+
+
+[dev2]
+[dev2.deploy]
+[dev2.deploy.parameters]
+stack_name = "spirits-dev2-merchant-api"
+s3_bucket = "843219620739-spirits-dev-samdeploy"
+s3_prefix = "spirits-dev2-merchant-api"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
+parameter_overrides = "Application=\"spirits\" Module=\"merchant\" Environment=\"dev2\" QueryLimit=\"20\" LogLevel=\"INFO\" RetentionInDays=\"30\" EventBusName=\"/spirits/dev2/platform/eventbus/arn\" NodeLayerArn=\"/spirits/dev2/shared/nodelayer/arn\" ElasticSearchDomainEndpoint=\"/spirits/dev2/elasticsearch/domain/endpoint\" MerchantpoolId=\"/spirits/dev2/platform/merchantuserpool/id\" OrderEventBus=\"/spirits/dev2/orderEventBus/name\" "
+
+[sit]
+[sit.deploy]
+[sit.deploy.parameters]
+stack_name = "spirits-sit-merchant-api"
+s3_bucket = "843219620739-spirits-dev-samdeploy"
+s3_prefix = "spirits-sit-merchant-api"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
+parameter_overrides = "Application=\"spirits\" Module=\"merchant\" Environment=\"sit\" QueryLimit=\"20\" LogLevel=\"INFO\" RetentionInDays=\"30\" EventBusName=\"/spirits/sit/platform/eventbus/arn\" NodeLayerArn=\"/spirits/sit/shared/nodelayer/arn\" ElasticSearchDomainEndpoint=\"/spirits/sit/elasticsearch/domain/endpoint\" MerchantpoolId=\"/spirits/sit/platform/merchantuserpool/id\" OrderEventBus=\"/spirits/sit/orderEventBus/name\" "
+
+[prd]
+[prd.deploy]
+[prd.deploy.parameters]
+stack_name = "spirits-prd-merchant-api"
+s3_bucket = "409907184267-spirits-prd-samdeploy"
+s3_prefix = "spirits-prd-merchant-api"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
+parameter_overrides = "Application=\"spirits\" Module=\"merchant\" Environment=\"prd\" QueryLimit=\"20\" LogLevel=\"INFO\" RetentionInDays=\"30\" EventBusName=\"/spirits/prd/platform/eventbus/arn\" NodeLayerArn=\"/spirits/prd/shared/nodelayer/arn\" ElasticSearchDomainEndpoint=\"/spirits/prd/elasticsearch/domain/endpoint\" MerchantpoolId=\"/spirits/prd/platform/merchantuserpool/id\" OrderEventBus=\"/spirits/prd/orderEventBus/name\" "
+

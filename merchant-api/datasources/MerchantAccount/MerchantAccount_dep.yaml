@@ -1,0 +1,108 @@
+################################################
+# Parameters
+################################################
+Parameters:
+  Application:
+    Type: String
+  Module:
+    Type: String
+  Environment:
+    Type: String
+    Default: dev2
+    Description: Environment name
+  LogLevel:
+    Type: String
+    Default: INFO
+  RetentionInDays:
+    Type: Number
+    Default: 1
+    Description: CloudWatch Logs retention period for Lambda functions
+  EventBusName:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: EventBridge Event Bus Name
+  NodeLayerArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: Node Layer NodeDependenciesLayer ARN
+  QueryLimit:
+    Type: Number
+    Default: 20
+    Description: Maximum number of items to return from a single query
+  ApiId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: API Id
+##############################################################
+# Data Sources for MerchantAccount
+##############################################################
+Resources:
+
+  ########################
+  # Get Store
+  ########################
+
+  GetStoreResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: StoreTable
+      FieldName: Stores
+      TypeName: MerchantAccount
+      RequestMappingTemplate: !Sub |
+        #if( $util.isNull($ctx.source.id) )
+          #return
+        #else
+        {
+          "version" : "2017-02-28",
+          "operation" : "Query",
+          "query" : {
+            ## Provide a query expression. **
+            "expression": "merchantAccountId = :merchantAccountId",
+            "expressionValues" : {
+              ":merchantAccountId" : $util.dynamodb.toDynamoDBJson($ctx.source.id)
+            }
+          },
+          "index": "byMerchantAccountId",
+          "select": "ALL_ATTRIBUTES",
+        }
+        #end
+      ResponseMappingTemplate: |
+        #if( $ctx.error )
+        $util.error($ctx.error.message, $ctx.error.type)
+        #else
+        $util.toJson($ctx.result)
+        #end
+
+  ########################
+  # Get Owner
+  ########################
+
+  GetOwnerResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: MerchantUserTable
+      FieldName: Owner
+      TypeName: MerchantAccount
+      RequestMappingTemplate: !Sub |
+        #if( $util.isNull($ctx.source.id) )
+          #return
+        #else
+        {
+          "version" : "2017-02-28",
+          "operation" : "Query",
+          "query" : {
+            ## Provide a query expression. **
+            "expression": "merchantAccountId = :merchantAccountId",
+            "expressionValues" : {
+              ":merchantAccountId" : $util.dynamodb.toDynamoDBJson($ctx.source.id)
+            }
+          },
+          "index": "byMerchantAccountId",
+          "select": "ALL_ATTRIBUTES",
+        }
+        #end
+      ResponseMappingTemplate: |
+        #if( $ctx.error )
+        $util.error($ctx.error.message, $ctx.error.type)
+        #else
+        $util.toJson($ctx.result)
+        #end

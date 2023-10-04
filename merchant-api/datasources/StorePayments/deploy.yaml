@@ -1,0 +1,274 @@
+Parameters:
+  Application:
+    Type: String
+  Module:
+    Type: String
+  Environment:
+    Type: String
+    Default: dev
+    Description: Environment name
+  LogLevel:
+    Type: String
+    Default: INFO
+  RetentionInDays:
+    Type: Number
+    Default: 1
+    Description: CloudWatch Logs retention period for Lambda functions
+  EventBusName:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: EventBridge Event Bus Name
+  NodeLayerArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: Node Layer NodeDependenciesLayer ARN
+  QueryLimit:
+    Type: Number
+    Default: 20
+    Description: Maximum number of items to return from a single query
+  ApiId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: API Id
+  SearchItem:
+    Type: String
+    Description: Search Item i.e. Table to search
+    Default: ${Application}-${Environment}-StorePayments
+Resources:
+  ManageStorePaymentsFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: appsync.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: ManageStorePaymentsFunctionAccess
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action: lambda:InvokeFunction
+            Resource:
+              Fn::Sub: arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Application}-${Environment}-ManageStorePayments-Function
+  ManageStorePaymentsDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId:
+        Ref: ApiId
+      Name: ManageStorePayments
+      Type: AWS_LAMBDA
+      ServiceRoleArn:
+        Fn::GetAtt:
+        - ManageStorePaymentsFunctionRole
+        - Arn
+      LambdaConfig:
+        LambdaFunctionArn:
+          Fn::Sub: arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Application}-${Environment}-ManageStorePayments-Function
+  CreateStorePaymentsResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId:
+        Ref: ApiId
+      DataSourceName:
+        Fn::GetAtt:
+        - ManageStorePaymentsDataSource
+        - Name
+      FieldName: createStorePayments
+      TypeName: Mutation
+      RequestMappingTemplate:
+        Fn::Sub: "#if($context.identity.claims.containsKey(\"m_account\"))\n  #set($accountId\
+          \ = $context.identity.claims.get(\"m_account\"))\n#else\n  #set($accountId\
+          \ = \"NONE\")\n#end\n#if($context.identity.claims.containsKey(\"m_group\"\
+          ))\n  #set($group = $context.identity.claims.get(\"m_group\"))\n#else\n\
+          \  #set($group = \"NONE\")\n#end\n#if($accountId == $context.arguments.input.merchantAccountId\
+          \ &&  $group == \"M_ADMIN\")\n##\n{\n  \"version\": \"2018-05-29\",\n  \
+          \  \"operation\": \"Invoke\",\n    \"payload\": {\n    \"field\": \"createStorePayments\"\
+          ,\n    \"identity\": $context.identity,\n    \"body\": $util.toJson($context.arguments)\n\
+          \  }\n}\n#else\n    $utils.unauthorized()\n#end\n"
+      ResponseMappingTemplate: '$utils.toJson($ctx.result)
+
+        '
+  UpdateStorePaymentsResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId:
+        Ref: ApiId
+      DataSourceName:
+        Fn::GetAtt:
+        - ManageStorePaymentsDataSource
+        - Name
+      FieldName: updateStorePayments
+      TypeName: Mutation
+      RequestMappingTemplate:
+        Fn::Sub: "#if($context.identity.claims.containsKey(\"m_group\"))\n  #set($group\
+          \ = $context.identity.claims.get(\"m_group\"))\n#else\n  #set($group = \"\
+          NONE\")\n#end\n#if($context.identity.claims.containsKey(\"m_stores\"))\n\
+          \  #set($stores = $context.identity.claims.get(\"m_stores\").split(\",\"\
+          ))\n#else\n  #set($stores = \"NONE\")\n#end\n#if( ($stores.contains($context.arguments.input.id)\
+          \ &&  $group == \"M_MANAGER\" )|| $group == \"M_ADMIN\")\n##\n{\n  \"version\"\
+          : \"2018-05-29\",\n    \"operation\": \"Invoke\",\n    \"payload\": {\n\
+          \    \"field\": \"updateStorePayments\",\n    \"identity\": $context.identity,\n\
+          \    \"body\": $util.toJson($context.arguments)\n  }\n}\n#else\n    $utils.unauthorized()\n\
+          #end\n"
+      ResponseMappingTemplate: '$utils.toJson($ctx.result)
+
+        '
+  DeleteStorePaymentsResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId:
+        Ref: ApiId
+      DataSourceName:
+        Fn::GetAtt:
+        - ManageStorePaymentsDataSource
+        - Name
+      FieldName: deleteStorePayments
+      TypeName: Mutation
+      RequestMappingTemplate:
+        Fn::Sub: "#if($context.identity.claims.containsKey(\"m_group\"))\n  #set($group\
+          \ = $context.identity.claims.get(\"m_group\"))\n#else\n  #set($group = \"\
+          NONE\")\n#end\n#if( $group == \"M_ADMIN\")\n##\n{\n  \"version\": \"2018-05-29\"\
+          ,\n    \"operation\": \"Invoke\",\n    \"payload\": {\n    \"field\": \"\
+          deleteStorePayments\",\n    \"identity\": $context.identity,\n    \"body\"\
+          : $util.toJson($context.arguments)\n  }\n}\n#else\n    $utils.unauthorized()\n\
+          #end\n"
+      ResponseMappingTemplate: '$utils.toJson($ctx.result)
+
+        '
+  GetStorePaymentsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: appsync.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: GetStorePaymentsTableAccess
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:BatchGetItem
+            Resource:
+            - Fn::Sub: arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Application}-${Environment}-StorePayments
+            - Fn::Sub: arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Application}-${Environment}-StorePayments/index/byMerchantAccountId
+  StorePaymentsTableDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId:
+        Ref: ApiId
+      Name: StorePaymentsTable
+      Type: AMAZON_DYNAMODB
+      ServiceRoleArn:
+        Fn::GetAtt:
+        - GetStorePaymentsRole
+        - Arn
+      DynamoDBConfig:
+        AwsRegion:
+          Ref: AWS::Region
+        TableName:
+          Fn::Sub: ${Application}-${Environment}-StorePayments
+  listStoresPaymentsResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId:
+        Ref: ApiId
+      DataSourceName:
+        Fn::GetAtt:
+        - StorePaymentsTableDataSource
+        - Name
+      FieldName: listStoresPayments
+      TypeName: Query
+      RequestMappingTemplate:
+        Fn::Sub: "#if($context.identity.claims.containsKey(\"m_account\"))\n  #set($accountId\
+          \ = $context.identity.claims.get(\"m_account\"))\n#else\n  $utils.unauthorized()\n\
+          #end   \n#if($context.identity.claims.containsKey(\"m_group\"))\n  #set($group\
+          \ = $context.identity.claims.get(\"m_group\"))\n#else\n  #set($group = \"\
+          NONE\")\n#end\n#set( $limit = $util.defaultIfNull($context.args.limit, 100)\
+          \ )\n#if($group == \"M_ADMIN\")\n  #set( $modelQueryExpression = {} )\n\
+          \  #set( $modelQueryExpression.expression = \"#merchantAccountId = :merchantAccountId\"\
+          \ )\n  #set( $modelQueryExpression.expressionNames = {\n  \"#merchantAccountId\"\
+          : \"merchantAccountId\"\n  } )\n  #set( $modelQueryExpression.expressionValues\
+          \ = {\n  \":merchantAccountId\": {\n      \"S\": \"$accountId\"}\n  } )\
+          \        \n  #set( $ListRequest = {\n    \"version\": \"2018-05-29\",\n\
+          \    \"limit\": $limit,\n    \"index\": \"byMerchantAccountId\",\n    \"\
+          select\": \"ALL_ATTRIBUTES\"\n  } )\n  #if( $context.args.nextToken )\n\
+          \    #set( $ListRequest.nextToken = $context.args.nextToken )\n  #end\n\
+          \  #if( $context.args.filter )\n    #set( $ListRequest.filter = $util.parseJson(\"\
+          $util.transform.toDynamoDBFilterExpression($ctx.args.filter)\") )\n  #end\n\
+          \  $util.qr($ListRequest.put(\"operation\", \"Query\"))\n  $util.qr($ListRequest.put(\"\
+          query\", $modelQueryExpression))\n  #if( !$util.isNull($ctx.args.sortDirection)\
+          \ && $ctx.args.sortDirection == \"DESC\" )\n    #set( $ListRequest.scanIndexForward\
+          \ = false )\n  #else\n    #set( $ListRequest.scanIndexForward = true )\n\
+          \  #end\n#else \n  #if($context.identity.claims.containsKey(\"m_stores\"\
+          ))\n    #set($stores = $context.identity.claims.get(\"m_stores\").split(\"\
+          ,\"))\n    #set($ids = [])\n    #foreach($id in $stores)\n        #set($map\
+          \ = {})\n        $util.qr($map.put(\"id\", $util.dynamodb.toString($id)))\n\
+          \        $util.qr($ids.add($map))\n    #end\n    #set($idJson = $util.toJson($ids))\n\
+          \  \t#set( $ListRequest = {\n      \"version\": \"2018-05-29\",\n      \"\
+          operation\": \"BatchGetItem\",\n      \"tables\": {\n          \"${Application}-${Environment}-StorePayments\"\
+          :{\n            \"keys\": $ids  \n          }\n      }\n    } )        \
+          \    \n  #end\n#end\n$util.toJson($ListRequest)\n"
+      ResponseMappingTemplate:
+        Fn::Sub: "#if( $ctx.error )\n  $util.error($ctx.error.message, $ctx.error.type)\n\
+          #else\n  #if($context.identity.claims.containsKey(\"m_stores\"))\n     \
+          \ #set($ctx.result.items = $ctx.result.data[\"${Application}-${Environment}-StorePayments\"\
+          ])\n      $util.qr($ctx.result.remove(\"data\"))\n      $util.toJson($ctx.result)\n\
+          \  #else\n      $util.toJson($ctx.result)\n  #end\n#end\n"
+  GetStorePaymentsResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId:
+        Ref: ApiId
+      DataSourceName:
+        Fn::GetAtt:
+        - StorePaymentsTableDataSource
+        - Name
+      FieldName: getStorePayments
+      TypeName: Query
+      RequestMappingTemplate:
+        Fn::Sub: "{\n  \"version\": \"2018-05-29\",\n  \"operation\": \"GetItem\"\
+          ,\n  \"key\": #if( $modelObjectKey ) $util.toJson($modelObjectKey) #else\
+          \ {\n  \"id\": $util.dynamodb.toDynamoDBJson($ctx.args.id)\n} #end\n}\n"
+      ResponseMappingTemplate: "#if($context.identity.claims.containsKey(\"m_account\"\
+        ))\n  #set($accountId = $context.identity.claims.get(\"m_account\"))\n#else\n\
+        \  $utils.unauthorized()\n#end   \n#if($context.identity.claims.containsKey(\"\
+        m_group\"))\n  #set($group = $context.identity.claims.get(\"m_group\"))\n\
+        #else\n  #set($group = \"NONE\")\n#end\n#if($context.identity.claims.containsKey(\"\
+        m_stores\"))\n  #set($stores = $context.identity.claims.get(\"m_stores\").split(\"\
+        ,\"))\n#else\n  #set($stores = [])\n#end\n#if( $ctx.error )\n  $util.error($ctx.error.message,\
+        \ $ctx.error.type)\n#else\n  #if(($group == \"M_ADMIN\" && $accountId == context.reslut[\"\
+        merchantAccountId]) || ($stores.containsKey(context.reslut[\"id])))\n    $util.toJson($ctx.result)\n\
+        \  #end\n#end\n"
+  GetMerchantAccountResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId:
+        Ref: ApiId
+      DataSourceName: MerchantAccountTable
+      TypeName: Query
+      FieldName: merchantAccount
+      RequestMappingTemplate:
+        Fn::Sub: "#if( $util.isNull($ctx.source.merchantAccountId) )\n  #return\n\
+          #else\n{\n      \"version\": \"2018-05-29\",\n      \"operation\": \"GetItem\"\
+          ,\n      \"key\": {\n          \"id\": $util.dynamodb.toDynamoDBJson($util.defaultIfNullOrBlank($ctx.source.merchantAccountId,\
+          \ \"___xamznone____\"))\n    }\n  }\n#end\n"
+      ResponseMappingTemplate: '#if( $ctx.error )
+
+        $util.error($ctx.error.message, $ctx.error.type)
+
+        #else
+
+        $util.toJson($ctx.result)
+
+        #end
+
+        '

@@ -1,0 +1,296 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: "AWS::Serverless-2016-10-31"
+
+################################################
+# Parameters
+################################################
+Parameters:
+  Application:
+    Type: String
+  Module:
+    Type: String
+  Environment:
+    Type: String
+    Default: sit
+    Description: Environment name
+  LogLevel:
+    Type: String
+    Default: INFO
+  RetentionInDays:
+    Type: Number
+    Default: 30
+    Description: CloudWatch Logs retention period for Lambda functions
+  ElasticSearchDomainEndpoint:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: ES Domain Endpoint
+  ApiId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: Api Id
+  NodeLayerArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: Node Layer NodeDependenciesLayer ARN
+
+Globals:
+  Function:
+    Runtime: nodejs16.x
+    Handler: index.handler
+    Layers:
+      - !Ref NodeLayerArn
+    Timeout: 30
+    Tracing: Active
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+        LOG_LEVEL: !Ref LogLevel
+
+################################################
+# Resources
+################################################
+Resources:
+  ########################
+  # Search Product  #
+  ########################
+  SearchProductFunctionMerchantRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: appsync.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: SearchProductFunctionMerchantAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: es:*
+                Resource: !Sub arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/${Application}-${Environment}-es
+
+  SearchProductMerchantDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !Ref ApiId
+      Name: SearchProduct
+      Type: AMAZON_ELASTICSEARCH
+      ServiceRoleArn: !GetAtt SearchProductMerchantFunctionRole.Arn
+      ElasticsearchConfig:
+        AwsRegion: !Sub ${AWS::Region}
+        Endpoint: !Sub ${ElasticSearchDomainEndpoint}
+
+  SearchProductsMerchantResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: !GetAtt SearchProductMerchantDataSource.Name
+      FieldName: searchProducts
+      TypeName: Query
+      RequestMappingTemplate: !Sub |
+        #set( $indexPath = "/${Application}-${Environment}-product/_search" )
+        #set( $nonKeywordFields = [] )
+        #if( $util.isNullOrEmpty($context.args.sort) )
+          #set( $sortDirection = "desc" )
+          #set( $sortField = "id" )
+        #else
+          #set( $sortDirection = $util.defaultIfNull($context.args.sort.direction, "desc") )
+          #set( $sortField = $util.defaultIfNull($context.args.sort.field, "id") )
+        #end
+        #if( $nonKeywordFields.contains($sortField) )
+          #set( $sortField0 = $util.toJson($sortField) )
+        #else
+          #set( $sortField0 = $util.toJson(sortField.keyword) )
+        #end
+        {
+          "version": "2018-05-29",
+          "operation": "GET",
+          "path": "$indexPath",
+          "params": {
+              "body":     {
+                        #if( $context.args.nextToken )"search_after": [$util.toJson($context.args.nextToken)], #end
+                        #if( $context.args.from )"from": $context.args.from, #end
+                        "size": #if( $context.args.limit ) $context.args.limit #else 100 #end,
+                        "sort": [{$sortField0: { "order" : $util.toJson($sortDirection) }}],
+                        "version": false,
+                        "query": #if( $context.args.filter )
+        $util.transform.toElasticsearchQueryDSL($ctx.args.filter)
+        ,
+        #else
+        {
+              "match_all": {}
+          }
+        ,
+        #end
+        "aggregations": {
+            "Country": {
+              "terms": {
+              "field": "country.keyword"
+              }
+            },
+            "Type": {
+              "terms": {
+              "field": "prodMajor.keyword"
+              }
+            },
+            "Container": {
+              "terms": {
+              "field": "container.keyword"
+              }
+            },
+            "Brand": {
+              "terms": {
+              "field": "brandLine.keyword"
+              }
+            },
+            "ProdCategory": {
+              "terms": {
+              "field": "prodCategory.keyword"
+              }
+            },
+            "ProdMajor": {
+              "terms": {
+              "field": "prodMajor.keyword"
+              }
+            },
+            "ProdMinor": {
+              "terms": {
+              "field": "prodMinor.keyword"
+              }
+            }
+            
+          }
+                        }
+          }
+        }
+
+      ResponseMappingTemplate: |
+        #set( $es_items = [] )
+        #foreach( $entry in $context.result.hits.hits )
+          #if( !$foreach.hasNext )
+            #set( $nextToken = $entry.sort.get(0) )
+          #end
+          $util.qr($es_items.add($entry.get("_source")))
+        #end
+        $util.toJson({
+          "items": $es_items,
+          "brand": $ctx.result.aggregations.Brand.buckets,
+          "majorType": $ctx.result.aggregations.Type.buckets,
+          "country": $ctx.result.aggregations.Country.buckets,
+          "container": $ctx.result.aggregations.Container.buckets,
+          "ProdCategory": $ctx.result.aggregations.ProdCategory.buckets,
+          "ProdMajor" : $ctx.result.aggregations.ProdMajor.buckets,
+          "ProdMinor" : $ctx.result.aggregations.ProdMinor.buckets,	
+          "total": $ctx.result.hits.total.value,
+          "nextToken": $nextToken
+        })
+
+  ########################
+  # Search Price And Availability  #
+  ########################
+  SearchPriceAndAvailabilityMerchantFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: appsync.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: SearchStoreFunctionMerchantAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: es:*
+                Resource: !Sub arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/${Application}-${Environment}-es
+
+  SearchPriceAndAvailabilityMerchantDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !Ref ApiId
+      Name: SearchPriceAndAvailability
+      Type: AMAZON_ELASTICSEARCH
+      ServiceRoleArn: !GetAtt SearchPriceAndAvailabilityMerchantFunctionRole.Arn
+      ElasticsearchConfig:
+        AwsRegion: !Sub ${AWS::Region}
+        Endpoint: !Sub ${ElasticSearchDomainEndpoint}
+
+  SearchPriceAndAvailabilitysMerchantResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: !GetAtt SearchPriceAndAvailabilityMerchantDataSource.Name
+      FieldName: searchPriceAndAvailabilitys
+      TypeName: Query
+      RequestMappingTemplate: !Sub |
+        #if( $context.args.distance && $context.args.lat && $context.args.lon )
+        #set( $dist = $context.args.distance )
+          #set( $unit = "mi" )
+          {
+            "version":"2017-02-28",
+            "operation":"GET",
+            "path":"/${Application}-${Environment}-priceandavailability/_search",
+            "params":{
+                "body": {
+                    "query": {
+                      "bool": {
+                          "must": [
+                              #if ($ctx.args.filter)
+                                  $util.transform.toElasticsearchQueryDSL($ctx.args.filter)
+                              #else
+                                  {
+                                      "match_all": {}
+                                  }
+                              #end
+                          ],
+                          "filter": [
+                            {
+                              "geo_distance": {
+                                "distance": "$dist$unit",
+                                "storeCoord": {
+                                  "lat": $ctx.args.lat,
+                                  "lon": $ctx.args.lon
+                                }
+                              }
+                            }
+                          ]
+                      }
+                    }
+                }
+            }
+          }
+        #else
+        {
+          "version":"2017-02-28",
+          "operation":"GET",
+          "path":"/${Application}-${Environment}-priceandavailability/_search",
+          "params":{
+              "body": {
+                  "query": #if ($ctx.args.filter)
+                  $util.transform.toElasticsearchQueryDSL($ctx.args.filter)
+                  #else 
+                  {
+                    "match_all": {}
+                  }
+                  #end
+              }
+          }
+        }
+        #end
+
+      ResponseMappingTemplate: |
+        #set( $es_items = [] )
+        #foreach( $entry in $context.result.hits.hits )
+          #if( !$foreach.hasNext )
+            #set( $nextToken = $entry.sort.get(0) )
+          #end
+          $util.qr($es_items.add($entry.get("_source")))
+        #end
+        $util.toJson({
+          "items": $es_items,
+          "total": $ctx.result.hits.total.value,
+          "nextToken": $nextToken
+        })

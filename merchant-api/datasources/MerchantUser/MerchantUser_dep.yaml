@@ -1,0 +1,270 @@
+################################################
+# Parameters
+################################################
+Parameters:
+  Application:
+    Type: String
+  Module:
+    Type: String
+  Environment:
+    Type: String
+    Default: dev2
+    Description: Environment name
+  LogLevel:
+    Type: String
+    Default: INFO
+  RetentionInDays:
+    Type: Number
+    Default: 1
+    Description: CloudWatch Logs retention period for Lambda functions
+  EventBusName:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: EventBridge Event Bus Name
+  NodeLayerArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: Node Layer NodeDependenciesLayer ARN
+  QueryLimit:
+    Type: Number
+    Default: 20
+    Description: Maximum number of items to return from a single query
+  ApiId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: API Id
+  SearchItem:
+    Type: String
+    Description: Search Item i.e. Table to search
+    Default: ${Appplication}-${Environment}-MerchantUser
+##############################################################
+# Data Sources for MerchantUser
+##############################################################
+Resources:
+  ########################
+  # Get Stores  #
+  ########################
+
+  GetStoresResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: MerchantUserStoreTable
+      FieldName: stores
+      TypeName: MerchantUser
+      RequestMappingTemplate: !Sub |
+        #if( $util.isNull($ctx.source.userId) )
+          #return
+        #else
+        {
+          "version" : "2017-02-28",
+          "operation" : "Query",
+          "query" : {
+              ## Provide a query expression. **
+              "expression": "userId = :userId",
+              "expressionValues" : {
+                ":userId" : $util.dynamodb.toDynamoDBJson($ctx.source.userId)
+              }
+          },
+          "index": "byUser",
+          "select": "ALL_ATTRIBUTES",
+        }
+        #end
+      ResponseMappingTemplate: |
+        #if( $ctx.error )
+        $util.error($ctx.error.message, $ctx.error.type)
+        #else
+        $util.toJson($ctx.result)
+        #end
+
+  ############################
+  # Get Merchant Account  #
+  ############################
+
+  GetMerchantAccountResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: MerchantAccountTable
+      FieldName: merchantAccount
+      TypeName: MerchantUser
+      RequestMappingTemplate: !Sub |
+        #if( $util.isNull($ctx.source.merchantAccountId) )
+          #return
+        #else
+        {
+          "version": "2017-02-28",
+          "operation": "GetItem",
+          "key": {
+            "id": $util.dynamodb.toDynamoDBJson($ctx.source.merchantAccountId),
+          }
+        }
+        #end
+      ResponseMappingTemplate: |
+        #if( $ctx.error )
+        $util.error($ctx.error.message, $ctx.error.type)
+        #else
+        $util.toJson($ctx.result)
+        #end
+
+  ##########################
+  # Create User West #
+  ##########################
+  updateEmailVerification:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: ManageMerchantUser
+      FieldName: updateEmailVerification
+      TypeName: Mutation
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "operation": "Invoke",
+          "payload": {
+            "field": "updateEmailVerification",
+            "body": $util.toJson($context.arguments)
+          }
+        }
+      ResponseMappingTemplate: |
+        $utils.toJson($ctx.result)
+
+ ##########################
+  # Create User West #
+  ##########################
+  updatePhoneVerification:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: ManageMerchantUser
+      FieldName: updatePhoneVerification
+      TypeName: Mutation
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "operation": "Invoke",
+          "payload": {
+            "field": "updatePhoneVerification",
+            "body": $util.toJson($context.arguments)
+          }
+        }
+      ResponseMappingTemplate: |
+        $utils.toJson($ctx.result)
+
+  ##########################
+  # Create User West #
+  ##########################
+  CreateUserWestMerchant:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: ManageMerchantUser
+      FieldName: createUserWest
+      TypeName: Mutation
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "operation": "Invoke",
+          "payload": {
+            "field": "createUserWest",
+            "body": $util.toJson($context.arguments)
+          }
+        }
+      ResponseMappingTemplate: |
+        $utils.toJson($ctx.result)
+
+  ##########################
+  # Update User West #
+  ##########################
+  UpdateUserWest:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: ManageMerchantUser
+      FieldName: updateUserWest
+      TypeName: Mutation
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "operation": "Invoke",
+          "payload": {
+            "field": "updateUserWest",
+            "body": $util.toJson($context.arguments)
+          }
+        }
+      ResponseMappingTemplate: |
+        $utils.toJson($ctx.result)
+
+  #########################
+  # Delete User Bulk #
+  #########################
+  DeleteMerchantUserBulkResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: ManageMerchantUser
+      FieldName: deleteMerchantUserBulk
+      TypeName: Mutation
+      RequestMappingTemplate: !Sub |
+        #if($context.identity.claims.containsKey("m_group"))
+          #set($group = $context.identity.claims.get("m_group"))
+        #else
+          #set($group = "NONE")
+        #end
+        #if( $group == "Merchant_Super_user" || $group == "Merchant_Admin" || $group == "Merchant_Manager" || $group == "Store_Manager")
+        ##
+        {
+          "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": {
+            "field": "deleteMerchantUserBulk",
+            "identity": $util.toJson($context.identity),
+            "body": $util.toJson($context.arguments)
+          }
+        }
+        #else
+            $utils.unauthorized()
+        #end
+      ResponseMappingTemplate: |
+        $utils.toJson($ctx.result)
+
+  ##########################
+  # Update Forget Password #
+  ##########################
+  UpdateForgetPassword:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: ManageMerchantUser
+      FieldName: updateForgetPassword
+      TypeName: Mutation
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "operation": "Invoke",
+          "payload": {
+            "field": "updateForgetPassword",
+            "body": $util.toJson($context.arguments)
+          }
+        }
+      ResponseMappingTemplate: |
+        $utils.toJson($ctx.result)
+
+  ##########################
+  # Confirm Signup #
+  ##########################
+  ConfirmSignup:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: ManageMerchantUser
+      FieldName: confirmSignup
+      TypeName: Mutation
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "operation": "Invoke",
+          "payload": {
+            "field": "confirmSignup",
+            "body": $util.toJson($context.arguments)
+          }
+        }
+      ResponseMappingTemplate: |
+        $utils.toJson($ctx.result)

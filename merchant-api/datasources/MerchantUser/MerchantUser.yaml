@@ -1,0 +1,262 @@
+################################################
+# Parameters
+################################################
+Parameters:
+  Application:
+    Type: String
+  Module:
+    Type: String
+  Environment:
+    Type: String
+    Default: dev2
+    Description: Environment name
+  LogLevel:
+    Type: String
+    Default: INFO
+  RetentionInDays:
+    Type: Number
+    Default: 1
+    Description: CloudWatch Logs retention period for Lambda functions
+  EventBusName:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: EventBridge Event Bus Name
+  NodeLayerArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: Node Layer NodeDependenciesLayer ARN
+  QueryLimit:
+    Type: Number
+    Default: 20
+    Description: Maximum number of items to return from a single query
+  ApiId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: API Id
+  SearchItem:
+    Type: String
+    Description: Search Item i.e. Table to search
+    Default: ${Appplication}-${Environment}-MerchantUser
+##############################################################
+# Data Sources for MerchantUser
+##############################################################
+Resources:
+  ##########################
+  # Roles #
+  ##########################
+  ManageMerchantUserFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: appsync.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ManageMerchantUserFunctionRole
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Application}-${Environment}-ManageMerchantUser-Function
+
+  ##########################
+  # Manage MerchantUser #
+  ##########################
+  ManageMerchantUserDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !Ref ApiId
+      Name: ManageMerchantUser
+      Type: AWS_LAMBDA
+      ServiceRoleArn: !GetAtt ManageMerchantUserFunctionRole.Arn
+      LambdaConfig:
+        LambdaFunctionArn: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Application}-${Environment}-ManageMerchantUser-Function
+
+  CreateMerchantUserResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: !GetAtt ManageMerchantUserDataSource.Name
+      FieldName: createMerchantUser
+      TypeName: Mutation
+      RequestMappingTemplate: !Sub |
+        {
+          "version": "2018-05-29",
+          "operation": "Invoke",
+          "payload": {
+            "field": "createMerchantUser",
+            "identity": $util.toJson($context.identity),
+            "body": $util.toJson($context.arguments)
+          }
+        }
+      ResponseMappingTemplate: |
+        #if (!$util.isNull($ctx.result.error))
+          $util.error($ctx.result.error.message, $ctx.result.error.type)
+        #end
+
+        $utils.toJson($ctx.result)
+
+  UpdateMerchantUserResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: !GetAtt ManageMerchantUserDataSource.Name
+      FieldName: updateMerchantUser
+      TypeName: Mutation
+      RequestMappingTemplate: !Sub |
+        {
+          "version": "2018-05-29",
+          "operation": "Invoke",
+          "payload": {
+            "field": "updateMerchantUser",
+            "body": $util.toJson($context.arguments)
+          }
+        }
+      ResponseMappingTemplate: |
+        $utils.toJson($ctx.result)
+
+  DeleteMerchantUserResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: !GetAtt ManageMerchantUserDataSource.Name
+      FieldName: deleteMerchantUser
+      TypeName: Mutation
+      RequestMappingTemplate: !Sub |
+        {
+          "version": "2018-05-29",
+          "operation": "Invoke",
+          "payload": {
+            "field": "deleteMerchantUser",
+            "body": $util.toJson($context.arguments)
+          }
+        }
+      ResponseMappingTemplate: |
+        $utils.toJson($ctx.result)
+
+  ########################
+  # Get MerchantUser  #
+  ########################
+  GetMerchantUserRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: appsync.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: GetMerchantUserTableAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:GetItem
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Application}-${Environment}-MerchantUser"
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Application}-${Environment}-MerchantUser/index/category"
+                  - !Sub "arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Application}-${Environment}-MerchantUser/index/byEmail"
+                  - !Sub "arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Application}-${Environment}-MerchantUser/index/byMerchantAccountId"
+
+  MerchantUserTableDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !Ref ApiId
+      Name: MerchantUserTable
+      Type: AMAZON_DYNAMODB
+      ServiceRoleArn: !GetAtt GetMerchantUserRole.Arn
+      DynamoDBConfig:
+        AwsRegion: !Ref AWS::Region
+        TableName: !Sub ${Application}-${Environment}-MerchantUser
+
+  listMerchantUserResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: !GetAtt MerchantUserTableDataSource.Name
+      FieldName: listMerchantUsers
+      TypeName: Query
+      RequestMappingTemplate: !Sub |
+        #if($context.identity.claims.containsKey("m_account"))
+        #set($accountId = $context.identity.claims.get("m_account"))
+        #else
+          $utils.unauthorized()
+        #end   
+        #if($context.identity.claims.containsKey("m_group"))
+          #set($group = $context.identity.claims.get("m_group"))
+        #else
+          #set($group = "NONE")
+        #end
+        #set( $limit = $util.defaultIfNull($context.args.limit, 100) )
+        #if($group == "Merchant_Admin" || $group == "Merchant_Super_user" || $group == "Merchant_Manager" || $group == "Store_Manager")
+          #set( $modelQueryExpression = {} )
+          #set( $modelQueryExpression.expression = "#merchantAccountId = :merchantAccountId" )
+          #set( $modelQueryExpression.expressionNames = {
+          "#merchantAccountId": "merchantAccountId"
+        } )
+        #set( $modelQueryExpression.expressionValues = {
+        ":merchantAccountId": {
+            "S": "$accountId"}
+        } )        
+        #set( $ListRequest = {
+          "version": "2018-05-29",
+          "limit": $limit,
+          "index": "byMerchantAccountId",
+          "select": "ALL_ATTRIBUTES"
+        } )
+        #if( $context.args.nextToken )
+          #set( $ListRequest.nextToken = $context.args.nextToken )
+        #end
+        #if( $context.args.filter )
+          #set( $ListRequest.filter = $util.parseJson("$util.transform.toDynamoDBFilterExpression($ctx.args.filter)"))
+        #end
+        $util.qr($ListRequest.put("operation", "Query"))
+        $util.qr($ListRequest.put("query", $modelQueryExpression))
+        #if( !$util.isNull($ctx.args.sortDirection) && $ctx.args.sortDirection == "DESC" )
+          #set( $ListRequest.scanIndexForward = false )
+        #else
+          #set( $ListRequest.scanIndexForward = true )
+        #end
+        #else
+          #set( $modelQueryExpression.expression = "#merchantAccountId = :merchantAccountId" )
+          $util.qr($ListRequest.put("operation", "Scan"))
+        #end
+        $util.toJson($ListRequest)
+      ResponseMappingTemplate: !Sub |
+        #if( $ctx.error )
+        $util.error($ctx.error.message, $ctx.error.type)
+        #else
+        $util.toJson($ctx.result)
+        #end
+
+  GetMerchantUserResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: !GetAtt MerchantUserTableDataSource.Name
+      FieldName: getMerchantUser
+      TypeName: Query
+      RequestMappingTemplate: !Sub |
+        {
+          "version": "2018-05-29",
+          "operation": "GetItem",
+          "key": #if( $modelObjectKey ) $util.toJson($modelObjectKey) #else {
+          "userId": $util.dynamodb.toDynamoDBJson($ctx.args.userId)
+        } #end
+        }
+      ResponseMappingTemplate: |
+        #if( $ctx.error )
+        $util.error($ctx.error.message, $ctx.error.type)
+        #else
+        $util.toJson($ctx.result)
+        #end

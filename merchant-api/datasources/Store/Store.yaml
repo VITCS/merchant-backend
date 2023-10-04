@@ -1,0 +1,563 @@
+################################################
+# Parameters
+################################################
+Parameters:
+  Application:
+    Type: String
+  Module:
+    Type: String
+  Environment:
+    Type: String
+    Default: dev2
+    Description: Environment name
+  LogLevel:
+    Type: String
+    Default: INFO
+  RetentionInDays:
+    Type: Number
+    Default: 1
+    Description: CloudWatch Logs retention period for Lambda functions
+  EventBusName:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: EventBridge Event Bus Name
+  NodeLayerArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: Node Layer NodeDependenciesLayer ARN
+  QueryLimit:
+    Type: Number
+    Default: 20
+    Description: Maximum number of items to return from a single query
+  ApiId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: API Id
+  SearchItem:
+    Type: String
+    Description: Search Item i.e. Table to search
+    Default: ${Appplication}-${Environment}-Store
+##############################################################
+# Data Sources for Store
+##############################################################
+Resources:
+  ##########################
+  # Roles #
+  ##########################
+  ManageStoreFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: appsync.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ManageStoreFunctionAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Application}-${Environment}-ManageStore-Function
+
+  ##########################
+  # Manage Store #
+  ##########################
+  ManageStoreDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !Ref ApiId
+      Name: ManageStore
+      Type: AWS_LAMBDA
+      ServiceRoleArn: !GetAtt ManageStoreFunctionRole.Arn
+      LambdaConfig:
+        LambdaFunctionArn: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Application}-${Environment}-ManageStore-Function
+
+  CreateStoreResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: !GetAtt ManageStoreDataSource.Name
+      FieldName: createStore
+      TypeName: Mutation
+      RequestMappingTemplate: !Sub |
+        #if($context.identity.claims.containsKey("m_account"))
+        #set($accountId = $context.identity.claims.get("m_account"))
+        #else
+        #set($accountId = "NONE")
+        #end
+        #if($context.identity.claims.containsKey("m_group"))
+        #set($group = $context.identity.claims.get("m_group"))
+        #else
+        #set($group = "NONE")
+        #end
+        #if($accountId == $context.arguments.input.merchantAccountId &&  ($group == "Merchant_Super_user" || $group == "Merchant_Admin") || $group == "Merchant_Manager")
+        ##
+        {
+          "version": "2018-05-29",
+          "operation": "Invoke",
+          "payload": {
+          "field": "createStore",
+          "identity": $util.toJson($context.identity),
+          "body": $util.toJson($context.arguments)
+        }
+        }
+        #else
+        $utils.unauthorized()
+        #end
+      ResponseMappingTemplate: |
+        $utils.toJson($ctx.result)
+
+  UpdateStoreResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: !GetAtt ManageStoreDataSource.Name
+      FieldName: updateStore
+      TypeName: Mutation
+      RequestMappingTemplate: !Sub |
+        #if($context.identity.claims.containsKey("m_group"))
+          #set($group = $context.identity.claims.get("m_group"))
+        #else
+          #set($group = "NONE")
+        #end
+        #if($context.identity.claims.containsKey("m_stores"))
+          #set($stores = $context.identity.claims.get("m_stores").split(","))
+        #else
+          #set($stores = "NONE")
+        #end
+        #if( ($stores.contains($context.arguments.input.id) &&  $group == "Merchant_Admin" )|| $group == "Merchant_Super_user" || $group == "Merchant_Manager" || $group == "Store_Manager")
+        ##
+        {
+          "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": {
+            "field": "updateStore",
+            "identity": $util.toJson($context.identity),
+            "body": $util.toJson($context.arguments)
+          }
+        }
+        #else
+            $utils.unauthorized()
+        #end
+      ResponseMappingTemplate: |
+        $utils.toJson($ctx.result)
+
+  DeleteStoreResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: !GetAtt ManageStoreDataSource.Name
+      FieldName: deleteStore
+      TypeName: Mutation
+      RequestMappingTemplate: !Sub |
+        #if($context.identity.claims.containsKey("m_group"))
+          #set($group = $context.identity.claims.get("m_group"))
+        #else
+          #set($group = "NONE")
+        #end
+        #if( $group == "Merchant_Super_user" || $group == "Merchant_Admin" || $group == "Merchant_Manager")
+        ##
+        {
+          "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": {
+            "field": "deleteStore",
+            "identity": $util.toJson($context.identity),
+            "body": $util.toJson($context.arguments)
+          }
+        }
+        #else
+            $utils.unauthorized()
+        #end
+      ResponseMappingTemplate: |
+        $utils.toJson($ctx.result)
+
+  ########################
+  # Get Store  #
+  ########################
+  GetStoreRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: appsync.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: GetStoreTableAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:GetItem
+                  - dynamodb:BatchGetItem
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Application}-${Environment}-Store"
+                  - !Sub "arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Application}-${Environment}-Store/index/category"
+                  - !Sub "arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Application}-${Environment}-Store/index/byMerchantAccountId"
+                  - !Sub "arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Application}-${Environment}-Store/index/byStoreStatus"
+  StoreTableDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !Ref ApiId
+      Name: StoreTable
+      Type: AMAZON_DYNAMODB
+      ServiceRoleArn: !GetAtt GetStoreRole.Arn
+      DynamoDBConfig:
+        AwsRegion: !Ref AWS::Region
+        TableName: !Sub ${Application}-${Environment}-Store
+
+  listStoresResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: !GetAtt StoreTableDataSource.Name
+      FieldName: listStores
+      TypeName: Query
+      RequestMappingTemplate: !Sub |
+        #if($context.identity.claims.containsKey("m_account"))
+          #set($accountId = $context.identity.claims.get("m_account"))
+        #else
+          $utils.unauthorized()
+        #end   
+        #if($context.identity.claims.containsKey("m_group"))
+          #set($group = $context.identity.claims.get("m_group"))
+        #else
+          #set($group = "NONE")
+        #end
+        #set( $limit = $util.defaultIfNull($context.args.limit, 100) )
+        #if($group == "Merchant_Super_user" || $group == "Merchant_Admin" || $group == "Merchant_Manager" || $group == "Store_Manager" )
+          #set( $modelQueryExpression = {} )
+          #set( $modelQueryExpression.expression = "#merchantAccountId = :merchantAccountId" )
+          #set( $modelQueryExpression.expressionNames = {
+          "#merchantAccountId": "merchantAccountId"
+          } )
+          #set( $modelQueryExpression.expressionValues = {
+          ":merchantAccountId": {
+              "S": "$accountId"}
+          } )        
+          #set( $ListRequest = {
+            "version": "2018-05-29",
+            "limit": $limit,
+            "index": "byMerchantAccountId",
+            "select": "ALL_ATTRIBUTES"
+          } )
+          #if( $context.args.nextToken )
+            #set( $ListRequest.nextToken = $context.args.nextToken )
+          #end
+          #if( $context.args.filter )
+            #set( $ListRequest.filter = $util.parseJson("$util.transform.toDynamoDBFilterExpression($ctx.args.filter)") )
+          #end
+          $util.qr($ListRequest.put("operation", "Query"))
+          $util.qr($ListRequest.put("query", $modelQueryExpression))
+          #if( !$util.isNull($ctx.args.sortDirection) && $ctx.args.sortDirection == "DESC" )
+            #set( $ListRequest.scanIndexForward = false )
+          #else
+            #set( $ListRequest.scanIndexForward = true )
+          #end
+        #else 
+          #if($context.identity.claims.containsKey("m_stores"))
+            #set($stores = $context.identity.claims.get("m_stores").split(","))
+            #set($ids = [])
+            #foreach($id in $stores)
+                #set($map = {})
+                $util.qr($map.put("id", $util.dynamodb.toString($id)))
+                $util.qr($ids.add($map))
+            #end
+            #set($idJson = $util.toJson($ids))
+          	#set( $ListRequest = {
+              "version": "2018-05-29",
+              "operation": "BatchGetItem",
+              "tables": {
+                  "${Application}-${Environment}-Store":{
+                    "keys": $ids  
+                  }
+              }
+            } )            
+          #end
+        #end
+        $util.toJson($ListRequest)
+      ResponseMappingTemplate: !Sub |
+        #if( $ctx.error )
+          $util.error($ctx.error.message, $ctx.error.type)
+        #else
+          #if($context.identity.claims.containsKey("m_stores"))
+              #set($ctx.result.items = $ctx.result.data["${Application}-${Environment}-Store"])
+              $util.qr($ctx.result.remove("data"))
+              $util.toJson($ctx.result)
+          #else
+              $util.toJson($ctx.result)
+          #end
+        #end
+  GetStoreResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: !GetAtt StoreTableDataSource.Name
+      FieldName: getStore
+      TypeName: Query
+      RequestMappingTemplate: !Sub |
+        {
+          "version": "2018-05-29",
+          "operation": "GetItem",
+          "key": #if( $modelObjectKey ) $util.toJson($modelObjectKey) #else {
+          "id": $util.dynamodb.toDynamoDBJson($ctx.args.id)
+        } #end
+        }
+      ResponseMappingTemplate: |
+        #if($context.identity.claims.containsKey("m_account"))
+          #set($accountId = $context.identity.claims.get("m_account"))
+        #else
+          $utils.unauthorized()
+        #end   
+        #if($context.identity.claims.containsKey("m_group"))
+          #set($group = $context.identity.claims.get("m_group"))
+        #else
+          #set($group = "NONE")
+        #end
+        #if($context.identity.claims.containsKey("m_stores"))
+          #set($stores = $context.identity.claims.get("m_stores").split(","))
+        #else
+          #set($stores = [])
+        #end
+        #if( $ctx.error )
+          $util.error($ctx.error.message, $ctx.error.type)
+        #else
+          #if(( $accountId == $context.result["merchantAccountId"])  && ($group == "Merchant_Super_user" || $group == "Merchant_Admin" || $group == "Merchant_Manager" || $group == "Store_Manager" || ($stores.containsKey($context.result["id"]))))
+            $util.toJson($ctx.result)
+          #end
+        #end
+
+  ########################
+  # Search Store  #
+  ########################
+  SearchStoreResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: ElasticSearchDomain
+      FieldName: searchStores
+      TypeName: Query
+      ResponseMappingTemplate: !Sub |
+        #set( $es_items = [] )
+        #foreach( $entry in $context.result.hits.hits )
+          #if( !$foreach.hasNext )
+            #set( $nextToken = $entry.sort.get(0) )
+          #end
+          $util.qr($es_items.add($entry.get("_source")))
+        #end
+        $util.toJson({
+          "items": $es_items,
+          "total": $ctx.result.hits.total,
+          "nextToken": $nextToken
+        })
+      RequestMappingTemplate: !Sub |
+        #set( $indexPath = "/${SearchItem}/doc/_search" )
+        #set( $nonKeywordFields = ["statusUpdatedAt"] )
+        #if( $util.isNullOrEmpty($context.args.sort) )
+          #set( $sortDirection = "desc" )
+          #set( $sortField = "id" )
+        #else
+          #set( $sortDirection = $util.defaultIfNull($context.args.sort.direction, "desc") )
+          #set( $sortField = $util.defaultIfNull($context.args.sort.field, "id") )
+        #end
+        #if( $nonKeywordFields.contains($sortField) )
+          #set( $sortField0 = $util.toJson($sortField) )
+        #else
+          #set( $sortField0 = $util.toJson("$sortField.keyword") )
+        #end
+        {
+          "version": "2018-05-29",
+          "operation": "GET",
+          "path": "$indexPath",
+          "params": {
+              "body":     {
+                        #if( $context.args.nextToken )"search_after": [$util.toJson($context.args.nextToken)], #end
+                        #if( $context.args.from )"from": $context.args.from, #end
+                        "size": #if( $context.args.limit ) $context.args.limit #else 100 #end,
+                        "sort": [{$sortField0: { "order" : $util.toJson($sortDirection) }}],
+                        "version": false,
+                        "query": #if( $context.args.filter )
+        $util.transform.toElasticsearchQueryDSL($ctx.args.filter)
+        #else
+        {
+              "match_all": {}
+          }
+        #end
+                        }
+          }
+        }
+
+  ##########################
+  # S3 Signed URL #
+  ##########################
+  SignedURLDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !Ref ApiId
+      Name: SignedURLDataSource
+      Type: AWS_LAMBDA
+      ServiceRoleArn: !GetAtt SignedURLAppSyncRole.Arn
+      LambdaConfig:
+        LambdaFunctionArn: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Application}-${Environment}-S3SignedURL-Function
+
+  S3SignedURLResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: !GetAtt SignedURLDataSource.Name
+      FieldName: getS3SignedURL
+      TypeName: Query
+      RequestMappingTemplate: !Sub |
+        {
+         "version" : "2018-05-29",
+         "operation": "Invoke",
+         "payload": {
+           "user": $util.toJson($context.identity.claims.get("cognito:username")),
+           "body": $util.toJson($context.arguments)
+           }
+         }
+
+      ResponseMappingTemplate: |
+        $utils.toJson($ctx.result)
+
+  SignedURLAppSyncRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: appsync.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: SignedURLFunctionAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Application}-${Environment}-S3SignedURL-Function
+
+  ##########################
+  # S3 Signed URL Multiple#
+  ##########################
+  GetSignedURLsAppSyncRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: appsync.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: GetSignedURLsFunctionAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Application}-${Environment}-GetSignedURLs-Function
+
+  MultiSignedURLsDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !Ref ApiId
+      Name: MultiSignedURLsDataSource
+      Type: AWS_LAMBDA
+      ServiceRoleArn: !GetAtt GetSignedURLsAppSyncRole.Arn
+      LambdaConfig:
+        LambdaFunctionArn: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Application}-${Environment}-GetSignedURLs-Function
+
+  GetSignedURLsResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: !GetAtt MultiSignedURLsDataSource.Name
+      FieldName: getMultipleSignedURL
+      TypeName: Query
+      RequestMappingTemplate: !Sub |
+        #if($context.identity.claims.containsKey("m_account"))
+          #set($accountId = $context.identity.claims.get("m_account"))
+        #else
+          #set($accountId = "NONE")
+        #end
+        #if($context.identity.claims.containsKey("m_group"))
+          #set($group = $context.identity.claims.get("m_group"))
+        #else
+          #set($group = "NONE")
+        #end
+        #set($username=$context.identity.claims.get("cognito:username"))
+        #if($accountId == $context.arguments.merchantAccountId && ( $group == "Merchant_Admin" ||  $group == "Merchant_Super_user" ) || $group == "Merchant_Manager" || $group == "Store_Manager")
+        ##
+         {
+          "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": {
+            "user": $util.toJson($username),
+            "body": $util.toJson($context.arguments)
+          }
+        }
+        #else
+            $utils.unauthorized()
+        #end
+      ResponseMappingTemplate: |
+        $utils.toJson($ctx.result)
+
+  DeletePhotoDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !Ref ApiId
+      Name: DeletePhotoDataSource
+      Type: AWS_LAMBDA
+      ServiceRoleArn: !GetAtt DeletePhotoAppSyncRole.Arn
+      LambdaConfig:
+        LambdaFunctionArn: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Application}-${Environment}-DeletePhotos-Function
+
+  DeletePhotoResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !Ref ApiId
+      DataSourceName: !GetAtt DeletePhotoDataSource.Name
+      FieldName: deletePhoto
+      TypeName: Mutation
+      RequestMappingTemplate: !Sub |
+        {
+         "version": "2018-05-29",
+           "operation": "Invoke",
+           "payload": {
+             "user": $util.toJson($context.identity.claims.get("cognito:username")),
+             "body": $util.toJson($context.arguments)
+           }
+         }
+
+      ResponseMappingTemplate: |
+        $utils.toJson($ctx.result)
+
+  DeletePhotoAppSyncRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: appsync.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: DeletePhotoFunctionAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Application}-${Environment}-DeletePhotos-Function
