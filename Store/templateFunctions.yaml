@@ -1,0 +1,321 @@
+################################################
+# Template for Tables - Store
+################################################
+
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: "AWS::Serverless-2016-10-31"
+
+################################################
+# Parameters
+################################################
+Parameters:
+  Application:
+    Type: String
+  Module:
+    Type: String
+  Environment:
+    Type: String
+    Default: dev2
+    Description: Environment name
+  LogLevel:
+    Type: String
+    Default: INFO
+  RetentionInDays:
+    Type: Number
+    Default: 30
+    Description: CloudWatch Logs retention period for Lambda functions
+  NodeLayerArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: Node Layer NodeDependenciesLayer ARN
+    
+
+Globals:
+  Function:
+    Runtime: nodejs16.x
+    Handler: index.handler
+    Layers:
+      - !Ref NodeLayerArn
+    Timeout: 30
+    Tracing: Active
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+        LOG_LEVEL: !Ref LogLevelbucket
+
+Mappings:
+ RegionSuffix:
+    "us-east-1":
+      SFX1: ""
+    "us-west-2":
+      SFX1: "-us-west-2"
+
+################################################
+# Resources
+################################################
+Resources:
+  ################################################
+  # Functions
+  ################################################
+  ManageStore:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${Application}-${Environment}-ManageStore-Function
+      Handler: manage_store.handler
+      CodeUri: ./src
+      MemorySize: 768
+      Tags:
+        Application: !Ref Application
+        Environment: !Ref Environment
+        Module: !Ref Module
+      Environment: 
+        Variables:
+          Application: !Ref Application
+          TABLE_NAME: !Sub ${Application}-${Environment}-Store
+          MERCHANT_USER_STORE_TABLE: !Sub ${Application}-${Environment}-MerchantUserStore
+          MERCHANT_USER_TABLE: !Sub ${Application}-${Environment}-MerchantUser
+          LOG_LEVEL: !Ref LogLevel        
+      Policies:
+        - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:BatchGetItem
+                - dynamodb:BatchWriteItem
+                - dynamodb:PutItem
+                - dynamodb:DeleteItem
+                - dynamodb:GetItem
+                - dynamodb:Scan
+                - dynamodb:Query
+                - dynamodb:UpdateItem
+              Resource:
+                - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Application}-${Environment}-Store
+                - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Application}-${Environment}-MerchantUserStore
+                - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Application}-${Environment}-MerchantUser
+                - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Application}-${Environment}-MerchantUserStore/index/byStore
+
+  ManageStoreLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ManageStore}"
+      RetentionInDays: !Ref RetentionInDays
+
+  ################################################
+  S3UploadStoreTrigger:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${Application}-${Environment}-Store-S3Notification-Function
+      Handler: s3Notification.handler
+      CodeUri: ./src
+      MemorySize: 768
+      Tags:
+        Application: !Ref Application
+        Environment: !Ref Environment
+        Module: !Ref Module
+      Environment: 
+        Variables:
+          TABLE_NAME: !Sub ${Application}-${Environment}-Store
+          BUCKET_NAME: 
+            !Sub
+              - "${Name}${Suffix}"
+              - Name: !Sub "${AWS::AccountId}-${Application}-${Environment}-store-photos"
+                Suffix: !FindInMap [RegionSuffix, !Ref "AWS::Region", SFX1]
+          LOG_LEVEL: !Ref LogLevel
+      Policies:
+        - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - "dynamodb:GetItem"
+                - "dynamodb:PutItem"
+                - "dynamodb:UpdateItem"
+              Resource: !Sub "arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Application}-${Environment}-Store"
+
+  S3TriggerInvokePermission:
+    Type: AWS::Lambda::Permission
+    DependsOn: S3UploadStoreTrigger
+    Properties:
+      FunctionName: !GetAtt S3UploadStoreTrigger.Arn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceArn: 
+        !Sub 
+          - "arn:aws:s3:::${Name}${Suffix}"
+          - Name: !Sub "${AWS::AccountId}-${Application}-${Environment}-store-photos"
+            Suffix: !FindInMap [RegionSuffix, !Ref "AWS::Region", SFX1]
+
+  ################################################
+  S3UploadUserPhotoTrigger:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${Application}-${Environment}-MerchantUser-S3Notification-Function
+      Handler: s3Notification_user.handler
+      CodeUri: ./src
+      MemorySize: 768
+      Tags:
+        Application: !Ref Application
+        Environment: !Ref Environment
+        Module: !Ref Module
+      Environment: 
+        Variables:
+          TABLE_NAME: !Sub ${Application}-${Environment}-MerchantUser
+          BUCKET_NAME: 
+            !Sub
+              - "${Name}${Suffix}"
+              - Name: !Sub "${AWS::AccountId}-${Application}-${Environment}-merchantuser-photos"
+                Suffix: !FindInMap [RegionSuffix, !Ref "AWS::Region", SFX1]
+          LOG_LEVEL: !Ref LogLevel      
+      Policies:
+        - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - "dynamodb:GetItem"
+                - "dynamodb:PutItem"
+                - "dynamodb:UpdateItem"
+              Resource: !Sub "arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Application}-${Environment}-MerchantUser"
+
+  S3UserTriggerInvokePermission:
+    Type: AWS::Lambda::Permission
+    DependsOn: S3UploadUserPhotoTrigger
+    Properties:
+      FunctionName: !GetAtt S3UploadUserPhotoTrigger.Arn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceArn: 
+        !Sub 
+          - "arn:aws:s3:::${Name}${Suffix}"
+          - Name: !Sub "${AWS::AccountId}-${Application}-${Environment}-merchantuser-photos"
+            Suffix: !FindInMap [RegionSuffix, !Ref "AWS::Region", SFX1]
+
+  ################################################
+  S3SignedURLFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${Application}-${Environment}-S3SignedURL-Function
+      Handler: s3signedurl.handler
+      CodeUri: ./src
+      MemorySize: 768
+      Tags:
+        Application: !Ref Application
+        Environment: !Ref Environment
+        Module: !Ref Module
+      Environment: 
+        Variables:
+          Application: !Ref Application
+          STORE_BUCKET_NAME: 
+            !Sub
+              - "${Name}${Suffix}"
+              - Name: !Sub "${AWS::AccountId}-${Application}-${Environment}-store-photos"
+                Suffix: !FindInMap [RegionSuffix, !Ref "AWS::Region", SFX1]
+          USER_BUCKET_NAME: 
+            !Sub
+              - "${Name}${Suffix}"
+              - Name: !Sub "${AWS::AccountId}-${Application}-${Environment}-merchantuser-photos"
+                Suffix: !FindInMap [RegionSuffix, !Ref "AWS::Region", SFX1]
+          LOG_LEVEL: !Ref LogLevel      
+      Policies:
+        - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - "s3:PutObject"
+                - "s3:GetObject"
+              Resource: !Sub arn:aws:s3:::${AWS::AccountId}-${Application}-${Environment}-*-photos/*
+
+
+  S3SignedURLStoreLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${S3SignedURLFunction}"
+      RetentionInDays: !Ref RetentionInDays
+
+  ################################################
+  GetSignedURLsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${Application}-${Environment}-GetSignedURLs-Function
+      Handler: getSignedURLs.handler
+      CodeUri: ./src
+      MemorySize: 768
+      Tags:
+        Application: !Ref Application
+        Environment: !Ref Environment
+        Module: !Ref Module
+      Environment: 
+        Variables:
+          Application: !Ref Application
+          Environment: !Ref Environment
+          STORE_BUCKET_NAME: 
+            !Sub
+              - "${Name}${Suffix}"
+              - Name: !Sub "${AWS::AccountId}-${Application}-${Environment}-store-photos"
+                Suffix: !FindInMap [RegionSuffix, !Ref "AWS::Region", SFX1]
+          USER_BUCKET_NAME: 
+            !Sub
+              - "${Name}${Suffix}"
+              - Name: !Sub "${AWS::AccountId}-${Application}-${Environment}-merchantuser-photos"
+                Suffix: !FindInMap [RegionSuffix, !Ref "AWS::Region", SFX1]
+          LOG_LEVEL: !Ref LogLevel      
+      Policies:
+        - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - "s3:PutObject"
+                - "s3:GetObject"
+              Resource: !Sub arn:aws:s3:::${AWS::AccountId}-${Application}-${Environment}-*-photos/*
+        
+  GetSignedURLsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${GetSignedURLsFunction}"
+      RetentionInDays: !Ref RetentionInDays
+
+  ################################################
+  DeletePhotosFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${Application}-${Environment}-DeletePhotos-Function
+      Handler: deletePhoto.handler
+      CodeUri: ./src
+      MemorySize: 768
+      Tags:
+        Application: !Ref Application
+        Environment: !Ref Environment
+        Module: !Ref Module
+      Environment: 
+        Variables:
+          Application: !Ref Application
+          Environment: !Ref Environment
+          STORE_BUCKET_NAME: 
+            !Sub
+              - "${Name}${Suffix}"
+              - Name: !Sub "${AWS::AccountId}-${Application}-${Environment}-store-photos"
+                Suffix: !FindInMap [RegionSuffix, !Ref "AWS::Region", SFX1]
+          USER_BUCKET_NAME: 
+            !Sub
+              - "${Name}${Suffix}"
+              - Name: !Sub "${AWS::AccountId}-${Application}-${Environment}-merchantuser-photos"
+                Suffix: !FindInMap [RegionSuffix, !Ref "AWS::Region", SFX1]
+          LOG_LEVEL: !Ref LogLevel      
+      Policies:
+        - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - "s3:PutObject"
+                - "s3:GetObject"
+                - "s3:DeleteObject"
+              Resource: !Sub arn:aws:s3:::${AWS::AccountId}-${Application}-${Environment}-*-photos/*
+        
+  DeletePhotosLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${DeletePhotosFunction}"
+      RetentionInDays: !Ref RetentionInDays

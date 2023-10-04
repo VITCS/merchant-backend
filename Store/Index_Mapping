@@ -1,0 +1,14 @@
+##########################################
+#  Need to setup Mapping for Geopoint
+###########################################
+PUT spirits-dev-store
+{
+    "mappings": {
+        "dynamic": true,
+        "properties":
+        {
+            "address.geoPoint": {"type": "geo_point"}
+        }
+
+    }
+}

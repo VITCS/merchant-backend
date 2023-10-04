@@ -1,0 +1,9 @@
+{
+    "field": "updateStore",
+    "body": {
+        "input": {
+            "id": "0145847875069999",
+            "storeName": "Test Updated"
+        }
+    }
+}
